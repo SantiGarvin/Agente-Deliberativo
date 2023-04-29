@@ -11,3 +11,8 @@ Makefile
 .cmake
 compile_commands.json
 lib/
+.gitpod.dockerfile
+.gitpod.yml
+FAQ.md
+README.md
+install.sh
