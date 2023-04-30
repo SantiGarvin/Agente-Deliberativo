@@ -268,6 +268,7 @@ private:
 	void actualizaEstado(const Sensores &sensores);
 	void actualizaPosicionOrientacion(bool esJugador);
 	void actualizaGrafo(const Mapa &mapa);
+  void actualizaMapaAux();
 	void actualizaMapaVisionJugador(const Sensores &sensores);
 
 	// FUNCIONES AUXILIARES
@@ -297,6 +298,9 @@ private:
 	// DEBUG
 	char orientacionASimbolo(Orientacion o);
 	void imprimirGrafo();
+
+  Terreno charToTerreno(unsigned char c);
+  Entidad charToEntidad(unsigned char c);
 };
 
 #endif

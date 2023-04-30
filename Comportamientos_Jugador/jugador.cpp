@@ -26,8 +26,10 @@ Action ComportamientoJugador::think(Sensores sensores)
 	if (sensores.nivel == 4){
 		actualizaMapaVisionJugador(sensores);
 		actualizaGrafo(mapaAux);
-	} else
-		actualizaGrafo(static_cast<ComportamientoJugador::Mapa>(mapaResultado));
+	} else {
+		actualizaMapaAux();
+		actualizaGrafo(mapaAux);
+	}
 
 	if (ruta.empty())
 	{
@@ -232,6 +234,15 @@ void ComportamientoJugador::actualizaPosicionOrientacion(bool esJugador)
 	}
 }
 
+void ComportamientoJugador::actualizaMapaAux(){
+	for(int i=0; i < mapaAux.size(); ++i){
+		for(int j=0; j < mapaAux[0].size(); ++j){
+			mapaAux[i][j].terreno = charToTerreno(mapaResultado[i][j]);
+			mapaAux[i][j].superficie = charToEntidad(mapaEntidades[i][j]);
+		}
+	}
+}
+
 void ComportamientoJugador::actualizaGrafo(const Mapa &mapa)
 {
     int filas = mapa.size();
@@ -265,6 +276,31 @@ void ComportamientoJugador::actualizaGrafo(const Mapa &mapa)
                 }
             }
         }
+    }
+}
+
+Terreno ComportamientoJugador::charToTerreno(unsigned char c) {
+    switch (c) {
+        case 'B': return Terreno::Bosque;
+        case 'A': return Terreno::Agua;
+        case 'P': return Terreno::Precipicio;
+        case 'S': return Terreno::SueloPiedra;
+        case 'T': return Terreno::SueloArenoso;
+        case 'M': return Terreno::Muro;
+        case 'K': return Terreno::Bikini;
+        case 'D': return Terreno::Zapatillas;
+        case 'X': return Terreno::Recarga;
+        default: return Terreno::Desconocido;
+    }
+}
+
+Entidad ComportamientoJugador::charToEntidad(unsigned char c) {
+    switch (c) {
+        case 'j': return Entidad::Jugador;
+        case 's': return Entidad::Sonambulo;
+        case 'a': return Entidad::Aldeano;
+        case 'l': return Entidad::Lobo;
+        default: return Entidad::SinEntidad;
     }
 }
 
