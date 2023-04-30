@@ -23,10 +23,11 @@ Action ComportamientoJugador::think(Sensores sensores)
 	// Actualizar información de los sensores
 	actualizaEstado(sensores);
 
-	if (sensores.nivel == 4)
+	if (sensores.nivel == 4){
 		actualizaMapaVisionJugador(sensores);
-
-	actualizaGrafo();
+		actualizaGrafo(mapaAux);
+	} else
+		actualizaGrafo(static_cast<ComportamientoJugador::Mapa>(mapaResultado));
 
 	if (ruta.empty())
 	{
@@ -231,7 +232,7 @@ void ComportamientoJugador::actualizaPosicionOrientacion(bool esJugador)
 	}
 }
 
-void ComportamientoJugador::actualizaGrafo(const vector<vector<unsigned char>> &mapa)
+void ComportamientoJugador::actualizaGrafo(const Mapa &mapa)
 {
     int filas = mapa.size();
     int columnas = mapa[0].size();
@@ -337,7 +338,7 @@ void ComportamientoJugador::anularMatriz(vector<vector<unsigned char>> &matriz){
 ubicacion ComportamientoJugador::nextCasilla(const ubicacion &pos){
 	ubicacion next = pos;
 
-	swtich(pos.brujula){
+	switch(pos.brujula){
 		case norte:
 			next.f = pos.f -1;
 			break;
@@ -374,7 +375,7 @@ ubicacion ComportamientoJugador::nextCasilla(const ubicacion &pos){
 void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 {
 	// anularMatriz(mapaConPlan);
-	Estado cst = st;
+	Estado cst = estadoActual;
 
 	auto it = plan.begin();
 	while(it != plan.end()){
@@ -508,7 +509,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador()
 
 	// COMPLETAR
 
-	list<Action *> ruta;
+	list<Action> ruta;
 
 	// Construye la lista de nodos en el orden correcto
 	while (!planBFS.empty())
@@ -527,7 +528,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraSonambulo()
 
 	// COMPLETAR
 
-	list<Nodo *> ruta;
+	list<Action> ruta;
 
 	// Construye la lista de nodos en el orden correcto
 	while (!planBFS.empty())
@@ -546,7 +547,7 @@ list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador()
 
 	// COMPLETAR
 
-	list<Nodo *> ruta;
+	list<Action> ruta;
 
 	// Construye la lista de nodos en el orden correcto
 	while (!planDijkstra.empty())
@@ -565,7 +566,7 @@ list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo()
 
 	// COMPLETAR
 
-	list<Nodo *> ruta;
+	list<Action> ruta;
 
 	// Construye la lista de nodos en el orden correcto
 	while (!planAStar.empty())
@@ -584,7 +585,7 @@ list<Action> ComportamientoJugador::maximizarPuntuacion()
 
 	// COMPLETAR
 
-	list<Nodo *> ruta;
+	list<Action> ruta;
 
 	// Construye la lista de nodos en el orden correcto
 	while (!planMaxPuntuacion.empty())

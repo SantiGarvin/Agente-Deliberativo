@@ -54,16 +54,21 @@ public:
 		{
 		}
 
+		Celda(unsigned char t)
+			: terreno{static_cast<Terreno>(t)},
+			  superficie{Entidad::SinEntidad}
+		{
+		}
+
 		Celda(Terreno t, Entidad s)
 			: terreno{t},
 			  superficie{s}
 		{
 		}
 
-		bool esTransitable(){
-			return (terreno != Terreno::Precipicio && terreno != Terreno::Muro
-					&& superficie != Entidad::Lobo && superficie != Entidad::Aldeano
-					&& superficie != Entidad::Sonambulo);
+		bool esTransitable() const
+		{
+			return (terreno != Terreno::Precipicio && terreno != Terreno::Muro && superficie != Entidad::Lobo && superficie != Entidad::Aldeano && superficie != Entidad::Sonambulo);
 		}
 	};
 
@@ -72,14 +77,14 @@ public:
 	//////////////////////////////////////////////////////////////////
 	struct Nodo
 	{
-		std::vector<Action> acciones; // Acciones posibles desde el nodo
-		std::vector<Nodo *> vecinos;  // Punteros a los nodos vecinos
+		vector<Action> acciones; // Acciones posibles desde el nodo
+		vector<Nodo *> vecinos;  // Punteros a los nodos vecinos
 
-		Nodo *padre; 			// Puntero al nodo padre
+		Nodo *padre; // Puntero al nodo padre
 
-		ubicacion pos;			  // Posición en el mapa y orientación
-		Celda celda;			  // Información de la celda
-		bool visitado;			  // Indica si el nodo ha sido visitado
+		ubicacion pos; // Posición en el mapa y orientación
+		Celda celda;   // Información de la celda
+		bool visitado; // Indica si el nodo ha sido visitado
 
 		vector<int> costos; // Costos de las acciones
 		int costoAcumulado; // Costo acumulado
@@ -164,7 +169,8 @@ public:
 			return pos == objetivo->pos;
 		}
 
-		bool esTransitable(){
+		bool esTransitable()
+		{
 			return celda.esTransitable();
 		}
 
@@ -240,7 +246,6 @@ private:
 	const int MAX_MAPA = 100;
 	int dimensionMapa;
 
-
 	Mapa mapaAux; // solo para nivel 4
 	Grafo grafo;
 	list<Nodo *> ruta;
@@ -262,7 +267,7 @@ private:
 	// ACTUALIZACIONES
 	void actualizaEstado(const Sensores &sensores);
 	void actualizaPosicionOrientacion(bool esJugador);
-	void actualizaGrafo(const vector<vector<unsigned char>> &mapa);
+	void actualizaGrafo(const Mapa &mapa);
 	void actualizaMapaVisionJugador(const Sensores &sensores);
 
 	// FUNCIONES AUXILIARES
