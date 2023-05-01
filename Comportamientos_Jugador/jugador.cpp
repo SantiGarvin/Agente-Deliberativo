@@ -23,47 +23,56 @@ Action ComportamientoJugador::think(Sensores sensores)
 	// Actualizar información de los sensores
 	actualizaEstado(sensores);
 
-	if (sensores.nivel == 4)
-	{
-		actualizaMapaVisionJugador(sensores);
-		actualizaGrafo(mapaAux);
-	}
-	else
+	if (sensores.nivel != 4)
 	{
 		actualizaMapaAux();
 		actualizaGrafo(mapaAux);
-	}
-
-	if (plan.empty())
-	{
-		// Lógica del agente
-		switch (nivel)
+		
+		if (!hayPlan)
 		{
-		case 0:
-			plan = busquedaAnchuraJugador();
-			break;
-		// case 1:
-		// 	plan = busquedaAnchuraSonambulo();
-		// 	break;
-		// case 2:
-		// 	plan = encuentraCaminoDijkstraJugador();
-		// 	break;
-		// case 3:
-		// 	plan = encuentraCaminoAStarSonambulo();
-		// 	break;
-		// case 4:
-		// 	plan = maximizarPuntuacion();
-		// 	break;
+			cout << "Calculando un nuevo plan\n";
+			switch (nivel)
+			{
+			case 0:
+				plan = busquedaAnchuraJugador();
+				break;
+				// case 1:
+				// 	plan = busquedaAnchuraSonambulo();
+				// 	break;
+				// case 2:
+				// 	plan = encuentraCaminoDijkstraJugador();
+				// 	break;
+				// case 3:
+				// 	plan = encuentraCaminoAStarSonambulo();
+				// 	break;
+				// case 4:
+				// 	plan = maximizarPuntuacion();
+				// 	break;
+			}
+			if (plan.size() > 0)
+			{
+				visualizaPlan(plan);
+				hayPlan = true;
+			}
 		}
-		hayPlan = true;
-	}
-	if (!plan.empty())
-	{
-		// completar
-	}
-	else
-	{
-		accion = actIDLE;
+		if (hayPlan && plan.size() > 0)
+		{
+			cout << "Ejecutando la siguiente accion del plan\n";
+			accion = plan.front();
+			plan.pop_front();
+		}
+		if (plan.size() == 0)
+		{
+			cout << "Se completo el plan\n";
+			hayPlan = false;
+		}
+	} else {
+		actualizaMapaVisionJugador(sensores);
+		actualizaGrafo(mapaAux);
+
+		// ------------------
+		// COMPLETAR NIVEL 4
+		// ------------------
 	}
 
 	//////////////////////////////////////////////////////////////////
@@ -594,43 +603,47 @@ Action ComportamientoJugador::accionEntreNodos(Nodo *nodoOrigen, Nodo *nodoDesti
 	return actIDLE;
 }
 
-list<Action> ComportamientoJugador::busquedaAnchuraJugador() {
-    queue<Nodo *> planBFS;
+list<Action> ComportamientoJugador::busquedaAnchuraJugador()
+{
+	queue<Nodo *> planBFS;
 
-    // COMPLETAR
+	// COMPLETAR
 
-    // Paso 1: Almacena el nodo final
-    Nodo *nodoFinal = nullptr;
+	// Paso 1: Almacena el nodo final
+	Nodo *nodoFinal = nullptr;
 
-    // ... Resto del algoritmo de búsqueda en anchura, y al final,
-    // asigna el último nodo visitado a nodoFinal.
+	// ... Resto del algoritmo de búsqueda en anchura, y al final,
+	// asigna el último nodo visitado a nodoFinal.
 
-    list<Action> ruta;
+	list<Action> ruta;
 
-    if (nodoFinal != nullptr) {
-        // Paso 2: Almacena las acciones en orden inverso
-        list<Action> rutaAux;
-        Nodo *nodoActual = nodoFinal;
-        while (nodoActual->padre != nullptr) {
-            // Obtiene la orientación necesaria para moverse desde el nodo padre al nodo actual
-            Orientacion orientacionRequerida = orientacionEntreNodos(*nodoActual->padre, *nodoActual);
+	if (nodoFinal != nullptr)
+	{
+		// Paso 2: Almacena las acciones en orden inverso
+		list<Action> rutaAux;
+		Nodo *nodoActual = nodoFinal;
+		while (nodoActual->padre != nullptr)
+		{
+			// Obtiene la orientación necesaria para moverse desde el nodo padre al nodo actual
+			Orientacion orientacionRequerida = orientacionEntreNodos(*nodoActual->padre, *nodoActual);
 
-            // Añade acciones de giro si es necesario para alinear la orientación del jugador
-            while (nodoActual->padre->pos.brujula != orientacionRequerida) {
-                rutaAux.push_front(actTURN_R);
-                nodoActual->padre->pos.brujula = static_cast<Orientacion>(((int)nodoActual->padre->pos.brujula + 1) % 4);
-            }
+			// Añade acciones de giro si es necesario para alinear la orientación del jugador
+			while (nodoActual->padre->pos.brujula != orientacionRequerida)
+			{
+				rutaAux.push_front(actTURN_R);
+				nodoActual->padre->pos.brujula = static_cast<Orientacion>(((int)nodoActual->padre->pos.brujula + 1) % 4);
+			}
 
-            // Añade la acción de movimiento para llegar al nodo actual desde el nodo padre
-            rutaAux.push_front(actFORWARD);
-            nodoActual = nodoActual->padre;
-        }
+			// Añade la acción de movimiento para llegar al nodo actual desde el nodo padre
+			rutaAux.push_front(actFORWARD);
+			nodoActual = nodoActual->padre;
+		}
 
-        // Paso 3: Invierte la lista auxiliar y asigna a ruta
-        ruta = rutaAux;
-    }
+		// Paso 3: Invierte la lista auxiliar y asigna a ruta
+		ruta = rutaAux;
+	}
 
-    return ruta;
+	return ruta;
 }
 
 // list<Action> ComportamientoJugador::busquedaAnchuraSonambulo()
