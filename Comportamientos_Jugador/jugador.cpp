@@ -12,6 +12,7 @@ using Celda = ComportamientoJugador::Celda;
 using Mapa = ComportamientoJugador::Mapa;
 using Terreno = ComportamientoJugador::Terreno;
 using Entidad = ComportamientoJugador::Entidad;
+using Estado = ComportamientoJugador::Estado;
 
 // Este es el método principal que se piden en la practica.
 // Tiene como entrada la información de los sensores y devuelve la acción a realizar.
@@ -25,16 +26,25 @@ Action ComportamientoJugador::think(Sensores sensores)
 
 	if (sensores.nivel != 4)
 	{
+		// Verificar si es el inicio de la simulación, si hay un reinicio o si es la primera iteración
+		if (sensores.reset || primeraIteracion) {
+			primeraIteracion = false; // Cambiar el valor de primeraIteracion a false para que no entre en el if en futuras iteraciones
+			return actWHEREIS;
+		}
+
 		actualizaMapaAux();
 		actualizaGrafo(mapaAux);
-		
+
 		if (!hayPlan)
 		{
 			cout << "Calculando un nuevo plan\n";
-			switch (nivel)
+
+			ubicacion destino = {sensores.destinoF, sensores.destinoC};
+			
+			switch (sensores.nivel)
 			{
 			case 0:
-				plan = busquedaAnchuraJugador();
+				plan = busquedaAnchuraJugador(estadoActual, destino);
 				break;
 				// case 1:
 				// 	plan = busquedaAnchuraSonambulo();
@@ -66,7 +76,9 @@ Action ComportamientoJugador::think(Sensores sensores)
 			cout << "Se completo el plan\n";
 			hayPlan = false;
 		}
-	} else {
+	}
+	else
+	{
 		actualizaMapaVisionJugador(sensores);
 		actualizaGrafo(mapaAux);
 
@@ -75,22 +87,6 @@ Action ComportamientoJugador::think(Sensores sensores)
 		// ------------------
 	}
 
-	//////////////////////////////////////////////////////////////////
-	// DEBUG														//
-	//////////////////////////////////////////////////////////////////
-	bool debug = false;
-	if (debug)
-	{
-		int f = estadoActual.jugador.f;
-		int c = estadoActual.jugador.c;
-
-		grafo[f][c].imprimirInfo();
-		cout << endl
-			 << endl;
-		imprimirGrafo();
-	}
-	//////////////////////////////////////////////////////////////////
-
 	return accion;
 }
 
@@ -98,7 +94,7 @@ void ComportamientoJugador::actualizaEstado(const Sensores &sensores)
 {
 	nivel = sensores.nivel;
 
-	if (nivel != 4)
+	if (sensores.nivel != 4)
 	{
 		// Actualizar posición del jugador
 		estadoActual.jugador.f = sensores.posF;
@@ -271,30 +267,8 @@ void ComportamientoJugador::actualizaGrafo(const Mapa &mapaAux)
 	{
 		for (int c = 0; c < columnas; ++c)
 		{
-			grafo[f][c].pos.f = f;
-			grafo[f][c].pos.c = c;
-			grafo[f][c].pos.brujula = norte;
-
 			grafo[f][c].celda.terreno = charToTerreno(mapaAux[f][c].terreno);
 			grafo[f][c].celda.superficie = charToEntidad(mapaAux[f][c].superficie);
-
-			// Limpiar todos los vecinos del nodo actual para luego agregar solo los válidos.
-			grafo[f][c].vecinos.clear();
-
-			// Comprobar cada vecino en las 8 direcciones posibles.
-			for (int i = 0; i < 8; ++i)
-			{
-				int fVecino = f + dfil[i];
-				int cVecino = c + dcol[i];
-
-				// Si el vecino está dentro de los límites del mapa y es transitable.
-				if (fVecino >= 0 && fVecino < filas && cVecino >= 0 && cVecino < columnas &&
-					(mapaAux[fVecino][cVecino]).esTransitable())
-				{
-					// Añadir el vecino al vector de vecinos del nodo actual.
-					grafo[f][c].vecinos.push_back(&grafo[fVecino][cVecino]);
-				}
-			}
 		}
 	}
 }
@@ -343,55 +317,10 @@ Entidad ComportamientoJugador::charToEntidad(unsigned char c)
 	}
 }
 
-Orientacion ComportamientoJugador::orientacionEntreNodos(const Nodo &origen, const Nodo &destino)
-{
-	int dFil = destino.pos.f - origen.pos.f;
-	int dCol = destino.pos.c - origen.pos.c;
-
-	if (dFil == -1 && dCol == 0)
-	{
-		return Orientacion::norte;
-	}
-	else if (dFil == -1 && dCol == 1)
-	{
-		return Orientacion::noreste;
-	}
-	else if (dFil == 0 && dCol == 1)
-	{
-		return Orientacion::este;
-	}
-	else if (dFil == 1 && dCol == 1)
-	{
-		return Orientacion::sureste;
-	}
-	else if (dFil == 1 && dCol == 0)
-	{
-		return Orientacion::sur;
-	}
-	else if (dFil == 1 && dCol == -1)
-	{
-		return Orientacion::suroeste;
-	}
-	else if (dFil == 0 && dCol == -1)
-	{
-		return Orientacion::oeste;
-	}
-	else if (dFil == -1 && dCol == -1)
-	{
-		return Orientacion::noroeste;
-	}
-	else
-	{
-		// En caso de que los nodos sean iguales o no sean adyacentes, devuelve una orientación por defecto
-		return Orientacion::norte;
-	}
-}
-
 void ComportamientoJugador::inicializaVariablesEstado()
 {
-	nivel = 0;
-	colision = false;
-	reset = false;
+	nivel = -1;
+	primeraIteracion = true;
 	estadoActual.jugador.f = 99;
 	estadoActual.jugador.c = 99;
 	estadoActual.jugador.brujula = norte;
@@ -408,16 +337,16 @@ void ComportamientoJugador::inicializaVariablesEstado()
 	ultimaAccionSonambulo = actIDLE;
 }
 
-void ComportamientoJugador::inicializarGrafo(int tamanio)
-{
-	for (int i = 0; i < tamanio; ++i)
-	{
-		for (int j = 0; j < tamanio; ++j)
-		{
-			grafo[i][j] = Nodo(this, i, j, Orientacion::norte);
-		}
-	}
-}
+// void ComportamientoJugador::inicializarGrafo(int tamanio)
+// {
+// 	for (int i = 0; i < tamanio; ++i)
+// 	{
+// 		for (int j = 0; j < tamanio; ++j)
+// 		{
+// 			grafo[i][j] = Nodo(i, j, Orientacion::norte);
+// 		}
+// 	}
+// }
 
 void ComportamientoJugador::anularMatriz(vector<vector<unsigned char>> &matriz)
 {
@@ -428,46 +357,6 @@ void ComportamientoJugador::anularMatriz(vector<vector<unsigned char>> &matriz)
 			matriz[i][j] = 0;
 		}
 	}
-}
-
-ubicacion ComportamientoJugador::nextCasilla(const ubicacion &pos)
-{
-	ubicacion next = pos;
-
-	switch (pos.brujula)
-	{
-	case norte:
-		next.f = pos.f - 1;
-		break;
-	case noreste:
-		next.f = pos.f - 1;
-		next.c = pos.c + 1;
-		break;
-	case este:
-		next.c = pos.c + 1;
-		break;
-	case sureste:
-		next.f = pos.f + 1;
-		next.c = pos.c + 1;
-		break;
-	case sur:
-		next.f = pos.f + 1;
-		break;
-	case suroeste:
-		next.f = pos.f + 1;
-		next.c = pos.c - 1;
-		break;
-	case oeste:
-		next.c = pos.c - 1;
-		break;
-	case noroeste:
-		next.f = pos.f - 1;
-		next.c = pos.c - 1;
-		break;
-	default:
-		break;
-	}
-	return next;
 }
 
 void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
@@ -481,7 +370,7 @@ void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 		switch (*it)
 		{
 		case actFORWARD:
-			cst.jugador = nextCasilla(cst.jugador);
+			cst.jugador = siguienteCasilla(cst.jugador);
 			mapaConPlan[cst.jugador.f][cst.jugador.c] = 1;
 		case actTURN_R:
 			cst.jugador.brujula = (Orientacion)((cst.jugador.brujula + 2) % 8);
@@ -490,7 +379,7 @@ void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 			cst.jugador.brujula = (Orientacion)((cst.jugador.brujula + 6) % 8);
 			break;
 		case actSON_FORWARD:
-			cst.sonambulo = nextCasilla(cst.sonambulo);
+			cst.sonambulo = siguienteCasilla(cst.sonambulo);
 			mapaConPlan[cst.sonambulo.f][cst.sonambulo.c] = 2;
 			break;
 		case actSON_TURN_SR:
@@ -501,53 +390,6 @@ void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 			break;
 		}
 		it++;
-	}
-}
-
-char ComportamientoJugador::orientacionASimbolo(Orientacion o)
-{
-	switch (o)
-	{
-	case norte:
-		return '^';
-	case noreste:
-		return '/';
-	case este:
-		return '>';
-	case sureste:
-		return '\\';
-	case sur:
-		return 'v';
-	case suroeste:
-		return '/';
-	case oeste:
-		return '<';
-	case noroeste:
-		return '\\';
-	default:
-		return '?';
-	}
-}
-
-void ComportamientoJugador::conectarNodos(int fila1, int columna1, int fila2, int columna2)
-{
-	// Conectar los nodos (fila1, columna1) y (fila2, columna2)
-	Nodo &nodo1 = grafo[fila1][columna1];
-	Nodo &nodo2 = grafo[fila2][columna2];
-	nodo1.vecinos.push_back(&nodo2);
-	nodo2.vecinos.push_back(&nodo1);
-}
-
-void ComportamientoJugador::imprimirGrafo()
-{
-	for (const auto &fila : grafo)
-	{
-		for (const auto &nodo : fila)
-		{
-			char simbolo = orientacionASimbolo(nodo.pos.brujula);
-			cout << simbolo << ' ';
-		}
-		cout << '\n';
 	}
 }
 
@@ -589,64 +431,104 @@ ubicacion ComportamientoJugador::siguienteCasilla(const ubicacion &pos)
 	return next;
 }
 
-Action ComportamientoJugador::accionEntreNodos(Nodo *nodoOrigen, Nodo *nodoDestino)
+Estado ComportamientoJugador::aplicar(const Action &a, const Estado &est)
 {
-	for (size_t i = 0; i < nodoOrigen->vecinos.size(); ++i)
-	{
-		if (nodoOrigen->vecinos[i] == nodoDestino)
-		{
-			return nodoOrigen->acciones[i];
-		}
-	}
+	Estado estadoResult = est;
+	ubicacion sigUbicacion;
 
-	// Si no se encuentra una acción entre los nodos, retorna actIDLE
-	return actIDLE;
+	switch (a)
+	{
+	case actFORWARD:
+		sigUbicacion = siguienteCasilla(estadoResult.jugador);
+		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == estadoActual.sonambulo.f && sigUbicacion.c == estadoActual.sonambulo.c))
+			estadoResult.jugador = sigUbicacion;
+		break;
+	case actTURN_R:
+		estadoResult.jugador.brujula = (Orientacion)((estadoResult.jugador.brujula + 2) % 8);
+		break;
+	case actTURN_L:
+		estadoResult.jugador.brujula = (Orientacion)((estadoResult.jugador.brujula + 6) % 8);
+		break;
+	case actSON_FORWARD:
+		sigUbicacion = siguienteCasilla(estadoResult.sonambulo);
+		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == estadoActual.jugador.f && sigUbicacion.c == estadoActual.jugador.c))
+			estadoResult.sonambulo = sigUbicacion;
+		break;
+	case actSON_TURN_SR:
+		estadoResult.sonambulo.brujula = (Orientacion)((estadoResult.sonambulo.brujula + 1) % 8);
+		break;
+	case actSON_TURN_SL:
+		estadoResult.sonambulo.brujula = (Orientacion)((estadoResult.sonambulo.brujula + 7) % 8);
+		break;
+	}
+	return estadoResult;
 }
 
-list<Action> ComportamientoJugador::busquedaAnchuraJugador()
+bool ComportamientoJugador::casillaTransitable(const ubicacion &pos)
 {
-	queue<Nodo *> planBFS;
+	return mapaAux[pos.f][pos.c].esTransitable();
+}
 
-	// COMPLETAR
+list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino) {
+	Nodo nodoActual(this);
+	list<Nodo> frontera;
+	set<Nodo> explorados;
+	list<Action> plan;
 
-	// Paso 1: Almacena el nodo final
-	Nodo *nodoFinal = nullptr;
+	bool SolucionEncontrada = (nodoActual.estado.jugador.f == destino.f && nodoActual.estado.jugador.c == destino.c);
 
-	// ... Resto del algoritmo de búsqueda en anchura, y al final,
-	// asigna el último nodo visitado a nodoFinal.
+	nodoActual.estado = origen;
+	frontera.push_back(nodoActual);
 
-	list<Action> ruta;
+	while(!frontera.empty() && !SolucionEncontrada){
+		frontera.pop_front();
+		explorados.insert(nodoActual);
 
-	if (nodoFinal != nullptr)
-	{
-		// Paso 2: Almacena las acciones en orden inverso
-		list<Action> rutaAux;
-		Nodo *nodoActual = nodoFinal;
-		while (nodoActual->padre != nullptr)
-		{
-			// Obtiene la orientación necesaria para moverse desde el nodo padre al nodo actual
-			Orientacion orientacionRequerida = orientacionEntreNodos(*nodoActual->padre, *nodoActual);
+		// Generar hijo actFORWARD
+		Nodo hijoForward = nodoActual;
 
-			// Añade acciones de giro si es necesario para alinear la orientación del jugador
-			while (nodoActual->padre->pos.brujula != orientacionRequerida)
-			{
-				rutaAux.push_front(actTURN_R);
-				nodoActual->padre->pos.brujula = static_cast<Orientacion>(((int)nodoActual->padre->pos.brujula + 1) % 4);
+		hijoForward.estado = aplicar(actFORWARD, nodoActual.estado);
+
+		if(hijoForward.estado.jugador.f == destino.f && hijoForward.estado.jugador.c == destino.c){
+			SolucionEncontrada = true;
+			nodoActual = hijoForward;
+		} else if(explorados.find(hijoForward) == explorados.end()){
+			hijoForward.secuencia.push_back(actFORWARD);
+			frontera.push_back(hijoForward);
+		}
+
+		if(!SolucionEncontrada){
+			// Generar hijo actTURN_L
+			Nodo hijoTurnL = nodoActual;
+			hijoTurnL.estado = aplicar(actTURN_L, nodoActual.estado);
+
+			if(explorados.find(hijoTurnL) == explorados.end()){
+				hijoTurnL.secuencia.push_back(actTURN_L);
+				frontera.push_back(hijoTurnL);
 			}
 
-			// Añade la acción de movimiento para llegar al nodo actual desde el nodo padre
-			rutaAux.push_front(actFORWARD);
-			nodoActual = nodoActual->padre;
-		}
+			// Generar hijo actTURN_R
+			Nodo hijoTurnR = nodoActual;
+			hijoTurnR.estado = aplicar(actTURN_R, nodoActual.estado);
 
-		// Paso 3: Invierte la lista auxiliar y asigna a ruta
-		ruta = rutaAux;
+			if(explorados.find(hijoTurnR) == explorados.end()){
+				hijoTurnR.secuencia.push_back(actTURN_R);
+				frontera.push_back(hijoTurnR);
+			}
+		}
 	}
 
-	return ruta;
+	if(SolucionEncontrada){
+		plan = nodoActual.secuencia;
+
+		return plan;
+	}
+	
+	// Si no se encuentra un plan, devolvemos una lista vacía
+	return list<Action>();
 }
 
-// list<Action> ComportamientoJugador::busquedaAnchuraSonambulo()
+// list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
 // {
 // 	queue<Nodo *> planBFS;
 
@@ -665,7 +547,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador()
 // 	return ruta;
 // }
 
-// list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador()
+// list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino)
 // {
 // 	priority_queue<Nodo *> planDijkstra;
 
@@ -684,7 +566,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador()
 // 	return ruta;
 // }
 
-// list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo()
+// list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino)
 // {
 // 	priority_queue<Nodo *> planAStar;
 
@@ -703,7 +585,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador()
 // 	return ruta;
 // }
 
-// list<Action> ComportamientoJugador::maximizarPuntuacion()
+// list<Action> ComportamientoJugador::maximizarPuntuacion(const Estado &origen, const ubicacion &destino)
 // {
 // 	priority_queue<Nodo *> planMaxPuntuacion;
 
@@ -916,11 +798,6 @@ void ComportamientoJugador::actualizaMapaVisionJugador(const Sensores &sensores)
 		}
 		break;
 	}
-}
-
-bool ComportamientoJugador::esObjetivo(const Nodo &objetivo)
-{
-	return estadoActual.jugador.f == objetivo.pos.f && estadoActual.jugador.c == objetivo.pos.c;
 }
 
 int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tipoCasilla)

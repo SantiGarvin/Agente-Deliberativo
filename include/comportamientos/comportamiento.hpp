@@ -15,7 +15,7 @@ struct ubicacion{
 
     bool operator==(const ubicacion &ub)const {
       return (f == ub.f and c == ub.c and brujula == ub.brujula);
-    }    
+    }
 };
 
 struct Sensores {

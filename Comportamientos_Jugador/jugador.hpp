@@ -100,74 +100,58 @@ public:
 	//////////////////////////////////////////////////////////////////
 	struct Nodo
 	{
-		vector<Action> acciones; // Acciones posibles desde el nodo
-		vector<Nodo *> vecinos;	 // Punteros a los nodos vecinos
-
 		Nodo *padre; // Puntero al nodo padre
 
-		ubicacion pos; // Posición del nodo
 		Estado estado; // Estado del nodo
 		Celda celda;   // Información de la celda
-		bool visitado; // Indica si el nodo ha sido visitado
 
-		vector<int> costos; // Costos de las acciones
+		list<Action> secuencia; // Acciones que se han realizado para llegar al nodo
+
 		int costoAcumulado; // Costo acumulado
 		int costoEstimado;	// Costo estimado hasta la meta (para A*)
-		int heuristica;		// Heurística para el cálculo del costo estimado
 
 		Nodo()
 			: comportamiento{nullptr},
-			  acciones{},
-			  vecinos{},
 			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
-			  pos{-1, -1, Orientacion::norte},
 			  estado{},
-			  visitado{false},
+			  secuencia{},
 			  costoAcumulado{0},
-			  costoEstimado{0},
-			  heuristica{0}
+			  costoEstimado{0}
 		{
 		}
-
-		Nodo(ComportamientoJugador* comp, int f, int c, Orientacion o = Orientacion::norte)
-			: comportamiento{comp},
-			  acciones{},
-			  vecinos{},
+		
+		Nodo(ComportamientoJugador *c)
+			: comportamiento{c},
 			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
-			  pos{f, c, o},
-			  visitado{false},
+			  estado{},
+			  secuencia{},
 			  costoAcumulado{0},
-			  costoEstimado{0},
-			  heuristica{0}
+			  costoEstimado{0}
 		{
 		}
 
-		Nodo(ComportamientoJugador* comp, int f, int c, Terreno t = Terreno::Desconocido, Entidad s = Entidad::SinEntidad)
-			: comportamiento{comp},
-			  acciones{},
-			  vecinos{},
-			  padre{nullptr},
-			  celda{t, s},
-			  pos{f, c, Orientacion::norte},
-			  visitado{false},
-			  costoAcumulado{0},
-			  costoEstimado{0},
-			  heuristica{0}
-		{
-		}
+		// bool operator<(const Nodo &other) const
+		// {
+		// 	int costoThis = costoAcumulado + heuristica;
+		// 	int costoOther = other.costoAcumulado + other.heuristica;
+
+		// 	return costoThis > costoOther;
+		// }
+
+		//----------------------------------------------------------
 
 		bool operator<(const Nodo &other) const
 		{
-			int costoJugador = costoAcumulado + heuristica;
-			int otherCostoJugador = other.costoAcumulado + other.heuristica;
+			// int costoJugador = costoAcumulado + heuristica;
+			// int otherCostoJugador = other.costoAcumulado + other.heuristica;
 
-			int costoSonambulo = costoAcumulado + heuristica;
-			int otherCostoSonambulo = other.costoAcumulado + other.heuristica;
+			// int costoSonambulo = costoAcumulado + heuristica;
+			// int otherCostoSonambulo = other.costoAcumulado + other.heuristica;
 
-			int costoTotal = costoAcumulado + heuristica;
-			int otherCostoTotal = other.costoAcumulado + other.heuristica;
+			// int costoTotal = costoAcumulado + heuristica;
+			// int otherCostoTotal = other.costoAcumulado + other.heuristica;
 
 			switch (comportamiento->nivel)
 			{
@@ -191,91 +175,61 @@ public:
 				else
 					return false;
 				break;
-			case 2:
-				if (costoJugador < otherCostoJugador)
-					return true;
-				else if (costoJugador == otherCostoJugador)
-					return estado.jugador.c < other.estado.jugador.c;
-				else if (costoJugador == otherCostoJugador && estado.jugador.c == other.estado.jugador.c)
-					return estado.jugador.brujula < other.estado.jugador.brujula;
-				else
-					return false;
-				break;
-			case 3:
-				if (costoSonambulo < otherCostoSonambulo)
-					return true;
-				else if (costoSonambulo == otherCostoSonambulo)
-					return estado.sonambulo.c < other.estado.sonambulo.c;
-				else if (costoSonambulo == otherCostoSonambulo && estado.sonambulo.c == other.estado.sonambulo.c)
-					return estado.sonambulo.brujula < other.estado.sonambulo.brujula;
-				else
-					return false;
-				break;
-			case 4:
-				if (costoTotal < otherCostoTotal)
-					return true;
-				else if (costoTotal == otherCostoTotal)
-					return (estado.jugador.c + estado.sonambulo.c) < (other.estado.jugador.c + other.estado.sonambulo.c);
-				else if (costoTotal == otherCostoTotal && (estado.jugador.c + estado.sonambulo.c) == (other.estado.jugador.c + other.estado.sonambulo.c))
-					return (estado.jugador.brujula + estado.sonambulo.brujula) < (other.estado.jugador.brujula + other.estado.sonambulo.brujula);
-				else
-					return false;
-				break;
+				// case 2:
+				// 	if (costoJugador < otherCostoJugador)
+				// 		return true;
+				// 	else if (costoJugador == otherCostoJugador)
+				// 		return estado.jugador.c < other.estado.jugador.c;
+				// 	else if (costoJugador == otherCostoJugador && estado.jugador.c == other.estado.jugador.c)
+				// 		return estado.jugador.brujula < other.estado.jugador.brujula;
+				// 	else
+				// 		return false;
+				// 	break;
+				// case 3:
+				// 	if (costoSonambulo < otherCostoSonambulo)
+				// 		return true;
+				// 	else if (costoSonambulo == otherCostoSonambulo)
+				// 		return estado.sonambulo.c < other.estado.sonambulo.c;
+				// 	else if (costoSonambulo == otherCostoSonambulo && estado.sonambulo.c == other.estado.sonambulo.c)
+				// 		return estado.sonambulo.brujula < other.estado.sonambulo.brujula;
+				// 	else
+				// 		return false;
+				// 	break;
+				// case 4:
+				// 	if (costoTotal < otherCostoTotal)
+				// 		return true;
+				// 	else if (costoTotal == otherCostoTotal)
+				// 		return (estado.jugador.c + estado.sonambulo.c) < (other.estado.jugador.c + other.estado.sonambulo.c);
+				// 	else if (costoTotal == otherCostoTotal && (estado.jugador.c + estado.sonambulo.c) == (other.estado.jugador.c + other.estado.sonambulo.c))
+				// 		return (estado.jugador.brujula + estado.sonambulo.brujula) < (other.estado.jugador.brujula + other.estado.sonambulo.brujula);
+				// 	else
+				// 		return false;
+				// 	break;
 			}
+			return false;
 		}
+
+		//----------------------------------------------------------
 
 		bool operator==(const Nodo &other) const
 		{
 			return (estado == other.estado);
 		}
 
-		void conectar(Nodo *otro_nodo, Action accion)
-		{
-			vecinos.push_back(otro_nodo);
-			acciones.push_back(accion);
-		}
-
-		void desconectar(Nodo *otro_nodo)
-		{
-			for (size_t i = 0; i < vecinos.size(); ++i)
-			{
-				if (vecinos[i] == otro_nodo)
-				{
-					vecinos.erase(vecinos.begin() + i);
-					acciones.erase(acciones.begin() + i);
-					break;
-				}
-			}
-		}
-
-		int calcularHeuristica(Nodo *objetivo)
-		{
-			// Ejemplo de heurística: distancia de Manhattan
-			int distancia_f = abs(pos.f - objetivo->pos.f);
-			int distancia_c = abs(pos.c - objetivo->pos.c);
-			heuristica = distancia_f + distancia_c;
-			return heuristica;
-		}
-
-		bool esObjetivo(Nodo *objetivo)
-		{
-			return pos == objetivo->pos;
-		}
+		// int calcularHeuristica(Nodo *objetivo)
+		// {
+		// 	// Ejemplo de heurística: distancia de Manhattan
+		// 	int distancia_f = abs(pos.f - objetivo->pos.f);
+		// 	int distancia_c = abs(pos.c - objetivo->pos.c);
+		// 	heuristica = distancia_f + distancia_c;
+		// 	return heuristica;
+		// }
 
 		bool esTransitable()
 		{
 			return celda.esTransitable();
 		}
 
-		void imprimirInfo()
-		{
-			std::cout << "Posicion: (" << pos.f << ", " << pos.c << ")" << std::endl;
-			std::cout << "Orientacion: " << static_cast<int>(pos.brujula) << std::endl;
-			std::cout << "Terreno: " << static_cast<int>(celda.terreno) << std::endl;
-			std::cout << "Superficie: " << static_cast<int>(celda.superficie) << std::endl;
-			std::cout << "Costo acumulado: " << costoAcumulado << std::endl;
-			std::cout << "Heuristica: " << heuristica << std::endl;
-		}
 	private:
 		ComportamientoJugador *comportamiento;
 	};
@@ -309,8 +263,7 @@ private:
 
 	int nivel;
 	int bateria;
-	bool colision;
-	bool reset;
+	bool primeraIteracion;
 
 	int tiempo;
 
@@ -353,7 +306,7 @@ private:
 
 	// INICIALIZACION
 	void inicializaVariablesEstado();
-	void inicializarGrafo(int tamanio);
+	// void inicializarGrafo(int tamanio);
 
 	// ACTUALIZACIONES
 	void actualizaEstado(const Sensores &sensores);
@@ -364,34 +317,23 @@ private:
 
 	// FUNCIONES AUXILIARES
 	int calcularCostoBateria(Action accion, unsigned char tipoCasilla);
-	list<Action> busquedaAnchuraJugador();
-	// list<Action> busquedaAnchuraSonambulo();
-	// list<Action> encuentraCaminoDijkstraJugador();
-	// list<Action> encuentraCaminoAStarSonambulo();
-	// list<Action> maximizarPuntuacion();
+	list<Action> busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino);
+	// list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
+	// list<Action> encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino);
+	// list<Action> encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino);
+	// list<Action> maximizarPuntuacion(const Estado &origen, const ubicacion &destino);
 
 	ubicacion siguienteCasilla(const ubicacion &pos);
-
-	void conectarNodos(int fila1, int columna1, int fila2, int columna2);
-
-	// Action eligeAccionPlan();
-
-	Action accionEntreNodos(Nodo *origen, Nodo *destino);
-
-	bool esObjetivo(const Nodo &objetivo);
-	Orientacion orientacionEntreNodos(const Nodo &origen, const Nodo &destino);
 
 	void anularMatriz(vector<vector<unsigned char>> &matriz);
 	void visualizaPlan(const list<Action> &plan);
 
-	ubicacion nextCasilla(const ubicacion &pos);
-
-	// DEBUG
-	char orientacionASimbolo(Orientacion o);
-	void imprimirGrafo();
-
 	Terreno charToTerreno(unsigned char c);
 	Entidad charToEntidad(unsigned char c);
+
+	Estado aplicar(const Action &a, const Estado &est);
+
+	bool casillaTransitable(const ubicacion &pos);
 };
 
 #endif
