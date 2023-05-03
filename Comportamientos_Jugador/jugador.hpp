@@ -4,6 +4,7 @@
 #include "comportamientos/comportamiento.hpp"
 
 #include <list>
+#include <set>
 #include <queue>
 #include <vector>
 #include <cmath>
@@ -54,13 +55,7 @@ public:
 		{
 		}
 
-		Celda(Terreno t)
-			: terreno{t},
-			  superficie{Entidad::SinEntidad}
-		{
-		}
-
-		Celda(Terreno t, Entidad s)
+		Celda(Terreno t, Entidad s = Entidad::SinEntidad)
 			: terreno{t},
 			  superficie{s}
 		{
@@ -68,7 +63,7 @@ public:
 
 		bool esTransitable() const
 		{
-			return (terreno != Terreno::Precipicio && terreno != Terreno::Muro && superficie != Entidad::Lobo && superficie != Entidad::Aldeano && superficie != Entidad::Sonambulo);
+			return (terreno != Terreno::Precipicio && terreno != Terreno::Muro && superficie != Entidad::Lobo && superficie != Entidad::Aldeano);
 		}
 	};
 
@@ -91,17 +86,15 @@ public:
 
 		bool operator==(const Estado &other) const
 		{
-			return (jugador == other.jugador && sonambulo == other.sonambulo);
+			return (jugador == other.jugador && sonambulo.f == other.sonambulo.f && sonambulo.c == other.sonambulo.c);
 		}
 	};
 
 	//////////////////////////////////////////////////////////////////
-	// Clase NODO													//
+	// Struct NODO													//
 	//////////////////////////////////////////////////////////////////
 	struct Nodo
 	{
-		Nodo *padre; // Puntero al nodo padre
-
 		Estado estado; // Estado del nodo
 		Celda celda;   // Información de la celda
 
@@ -112,7 +105,6 @@ public:
 
 		Nodo()
 			: comportamiento{nullptr},
-			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
 			  secuencia{},
@@ -120,10 +112,9 @@ public:
 			  costoEstimado{0}
 		{
 		}
-		
+
 		Nodo(ComportamientoJugador *c)
 			: comportamiento{c},
-			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
 			  secuencia{},
@@ -158,10 +149,10 @@ public:
 			case 0:
 				if (estado.jugador.f < other.estado.jugador.f)
 					return true;
-				else if (estado.jugador.f == other.estado.jugador.f)
-					return estado.jugador.c < other.estado.jugador.c;
-				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c)
-					return estado.jugador.brujula < other.estado.jugador.brujula;
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c < other.estado.jugador.c)
+					return true;
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula < other.estado.jugador.brujula)
+					return true;
 				else
 					return false;
 				break;
@@ -279,9 +270,9 @@ private:
 
 	bool hayPlan;
 
-	queue<Action> planBFS;
-	priority_queue<Action> planAStar;
-	priority_queue<Action> planDijkstra;
+	// queue<Action> planBFS;
+	// priority_queue<Action> planAStar;
+	// priority_queue<Action> planDijkstra;
 
 	//////////////////////////////////////////////////////////////////
 	// Mapas - Ubicaciones											//
@@ -325,7 +316,7 @@ private:
 
 	ubicacion siguienteCasilla(const ubicacion &pos);
 
-	void anularMatriz(vector<vector<unsigned char>> &matriz);
+	void anularMapaConPlan();
 	void visualizaPlan(const list<Action> &plan);
 
 	Terreno charToTerreno(unsigned char c);
@@ -334,6 +325,14 @@ private:
 	Estado aplicar(const Action &a, const Estado &est);
 
 	bool casillaTransitable(const ubicacion &pos);
+
+
+
+	//////////////////////////////////////////////////////////////////
+	void debug(bool imprimir) const ;
+	string toString(Orientacion orientacion) const ;
+	string toString(Action accion) const;
+	//////////////////////////////////////////////////////////////////
 };
 
 #endif

@@ -21,26 +21,28 @@ Action ComportamientoJugador::think(Sensores sensores)
 {
 	Action accion = actIDLE;
 
-	// Actualizar información de los sensores
-	actualizaEstado(sensores);
-
 	if (sensores.nivel != 4)
 	{
 		// Verificar si es el inicio de la simulación, si hay un reinicio o si es la primera iteración
-		if (sensores.reset || primeraIteracion) {
+		if (sensores.reset || primeraIteracion)
+		{
 			primeraIteracion = false; // Cambiar el valor de primeraIteracion a false para que no entre en el if en futuras iteraciones
 			return actWHEREIS;
 		}
 
+		// Actualizar información de los sensores
+		actualizaEstado(sensores);
 		actualizaMapaAux();
 		actualizaGrafo(mapaAux);
+
+		debug(true);
 
 		if (!hayPlan)
 		{
 			cout << "Calculando un nuevo plan\n";
 
 			ubicacion destino = {sensores.destinoF, sensores.destinoC};
-			
+
 			switch (sensores.nivel)
 			{
 			case 0:
@@ -58,9 +60,15 @@ Action ComportamientoJugador::think(Sensores sensores)
 				// case 4:
 				// 	plan = maximizarPuntuacion();
 				// 	break;
+				// plan.push_back(actFORWARD);
+				// plan.push_back(actFORWARD);
+				// plan.push_back(actTURN_R);
+				// plan.push_back(actFORWARD);
+				// plan.push_back(actFORWARD);
 			}
 			if (plan.size() > 0)
 			{
+				cout << "Dibujando plan\n";
 				visualizaPlan(plan);
 				hayPlan = true;
 			}
@@ -79,6 +87,7 @@ Action ComportamientoJugador::think(Sensores sensores)
 	}
 	else
 	{
+		actualizaEstado(sensores);
 		actualizaMapaVisionJugador(sensores);
 		actualizaGrafo(mapaAux);
 
@@ -93,6 +102,7 @@ Action ComportamientoJugador::think(Sensores sensores)
 void ComportamientoJugador::actualizaEstado(const Sensores &sensores)
 {
 	nivel = sensores.nivel;
+	bateria = sensores.bateria;
 
 	if (sensores.nivel != 4)
 	{
@@ -244,9 +254,9 @@ void ComportamientoJugador::actualizaPosicionOrientacion(bool esJugador)
 
 void ComportamientoJugador::actualizaMapaAux()
 {
-	for (int i = 0; i < mapaAux.size(); ++i)
+	for (int i = 0; i < mapaResultado.size(); ++i)
 	{
-		for (int j = 0; j < mapaAux[0].size(); ++j)
+		for (int j = 0; j < mapaResultado[0].size(); ++j)
 		{
 			mapaAux[i][j].terreno = charToTerreno(mapaResultado[i][j]);
 			mapaAux[i][j].superficie = charToEntidad(mapaEntidades[i][j]);
@@ -256,8 +266,8 @@ void ComportamientoJugador::actualizaMapaAux()
 
 void ComportamientoJugador::actualizaGrafo(const Mapa &mapaAux)
 {
-	int filas = mapaAux.size();
-	int columnas = mapaAux[0].size();
+	int filas = grafo.size();
+	int columnas = grafo[0].size();
 
 	// Coordenadas de desplazamiento: arriba, derecha, abajo, izquierda, y las diagonales.
 	int dfil[] = {-1, 0, 1, 0, -1, 1, 1, -1};
@@ -348,20 +358,20 @@ void ComportamientoJugador::inicializaVariablesEstado()
 // 	}
 // }
 
-void ComportamientoJugador::anularMatriz(vector<vector<unsigned char>> &matriz)
+void ComportamientoJugador::anularMapaConPlan()
 {
-	for (int i = 0; i < matriz.size(); ++i)
+	for (int i = 0; i < mapaConPlan.size(); ++i)
 	{
-		for (int j = 0; j < matriz.size(); ++j)
+		for (int j = 0; j < mapaConPlan.size(); ++j)
 		{
-			matriz[i][j] = 0;
+			mapaConPlan[i][j] = 0;
 		}
 	}
 }
 
 void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 {
-	anularMatriz(mapaConPlan);
+	anularMapaConPlan();
 	Estado cst = estadoActual;
 
 	auto it = plan.begin();
@@ -372,21 +382,22 @@ void ComportamientoJugador::visualizaPlan(const list<Action> &plan)
 		case actFORWARD:
 			cst.jugador = siguienteCasilla(cst.jugador);
 			mapaConPlan[cst.jugador.f][cst.jugador.c] = 1;
+			break;
 		case actTURN_R:
-			cst.jugador.brujula = (Orientacion)((cst.jugador.brujula + 2) % 8);
+			cst.jugador.brujula = static_cast<Orientacion>((cst.jugador.brujula + 2) % 8);
 			break;
 		case actTURN_L:
-			cst.jugador.brujula = (Orientacion)((cst.jugador.brujula + 6) % 8);
+			cst.jugador.brujula = static_cast<Orientacion>((cst.jugador.brujula + 6) % 8);
 			break;
 		case actSON_FORWARD:
 			cst.sonambulo = siguienteCasilla(cst.sonambulo);
 			mapaConPlan[cst.sonambulo.f][cst.sonambulo.c] = 2;
 			break;
 		case actSON_TURN_SR:
-			cst.sonambulo.brujula = (Orientacion)((cst.sonambulo.brujula + 1) % 8);
+			cst.sonambulo.brujula = static_cast<Orientacion>((cst.sonambulo.brujula + 1) % 8);
 			break;
 		case actSON_TURN_SL:
-			cst.sonambulo.brujula = (Orientacion)((cst.sonambulo.brujula + 7) % 8);
+			cst.sonambulo.brujula = static_cast<Orientacion>((cst.sonambulo.brujula + 7) % 8);
 			break;
 		}
 		it++;
@@ -431,37 +442,37 @@ ubicacion ComportamientoJugador::siguienteCasilla(const ubicacion &pos)
 	return next;
 }
 
-Estado ComportamientoJugador::aplicar(const Action &a, const Estado &est)
+Estado ComportamientoJugador::aplicar(const Action &a, const Estado &st)
 {
-	Estado estadoResult = est;
+	Estado stResult = st;
 	ubicacion sigUbicacion;
 
 	switch (a)
 	{
 	case actFORWARD:
-		sigUbicacion = siguienteCasilla(estadoResult.jugador);
-		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == estadoActual.sonambulo.f && sigUbicacion.c == estadoActual.sonambulo.c))
-			estadoResult.jugador = sigUbicacion;
-		break;
-	case actTURN_R:
-		estadoResult.jugador.brujula = (Orientacion)((estadoResult.jugador.brujula + 2) % 8);
+		sigUbicacion = siguienteCasilla(st.jugador);
+		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == st.sonambulo.f && sigUbicacion.c == st.sonambulo.c))
+			stResult.jugador = sigUbicacion;
 		break;
 	case actTURN_L:
-		estadoResult.jugador.brujula = (Orientacion)((estadoResult.jugador.brujula + 6) % 8);
+		stResult.jugador.brujula = static_cast<Orientacion>((stResult.jugador.brujula + 6) % 8);
+		break;
+	case actTURN_R:
+		stResult.jugador.brujula = static_cast<Orientacion>((stResult.jugador.brujula + 2) % 8);
 		break;
 	case actSON_FORWARD:
-		sigUbicacion = siguienteCasilla(estadoResult.sonambulo);
-		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == estadoActual.jugador.f && sigUbicacion.c == estadoActual.jugador.c))
-			estadoResult.sonambulo = sigUbicacion;
-		break;
-	case actSON_TURN_SR:
-		estadoResult.sonambulo.brujula = (Orientacion)((estadoResult.sonambulo.brujula + 1) % 8);
+		sigUbicacion = siguienteCasilla(st.sonambulo);
+		if (casillaTransitable(sigUbicacion) && !(sigUbicacion.f == st.jugador.f && sigUbicacion.c == st.jugador.c))
+			stResult.sonambulo = sigUbicacion;
 		break;
 	case actSON_TURN_SL:
-		estadoResult.sonambulo.brujula = (Orientacion)((estadoResult.sonambulo.brujula + 7) % 8);
+		stResult.sonambulo.brujula = static_cast<Orientacion>((stResult.sonambulo.brujula + 7) % 8);
+		break;
+	case actSON_TURN_SR:
+		stResult.sonambulo.brujula = static_cast<Orientacion>((stResult.sonambulo.brujula + 1) % 8);
 		break;
 	}
-	return estadoResult;
+	return stResult;
 }
 
 bool ComportamientoJugador::casillaTransitable(const ubicacion &pos)
@@ -469,83 +480,93 @@ bool ComportamientoJugador::casillaTransitable(const ubicacion &pos)
 	return mapaAux[pos.f][pos.c].esTransitable();
 }
 
-list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino) {
-	Nodo nodoActual(this);
-	list<Nodo> frontera;
-	set<Nodo> explorados;
-	list<Action> plan;
+list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino)
+{
+    Nodo nodoActual(this);
+    list<Nodo> frontera;
+    set<Nodo> explorados;
+    list<Action> plan;
 
-	bool SolucionEncontrada = (nodoActual.estado.jugador.f == destino.f && nodoActual.estado.jugador.c == destino.c);
+	// Inicializar el nodo actual
+    nodoActual.estado = origen;
 
-	nodoActual.estado = origen;
-	frontera.push_back(nodoActual);
+	// Comprobar si el origen es el destino
+    bool SolucionEncontrada = (nodoActual.estado.jugador.f == destino.f && nodoActual.estado.jugador.c == destino.c);
 
-	while(!frontera.empty() && !SolucionEncontrada){
-		frontera.pop_front();
-		explorados.insert(nodoActual);
+	// Si no es el destino, generar los hijos
+    frontera.push_back(nodoActual);
 
-		// Generar hijo actFORWARD
+	// Mientras haya nodos en la frontera y no se haya encontrado la solución
+    while (!frontera.empty() && !SolucionEncontrada)
+    {
+		// Extraer el primer nodo de la frontera
+        frontera.pop_front();
+        explorados.insert(nodoActual);
+
+		// Gererar hijo actFORWARD
 		Nodo hijoForward = nodoActual;
-
 		hijoForward.estado = aplicar(actFORWARD, nodoActual.estado);
 
 		if(hijoForward.estado.jugador.f == destino.f && hijoForward.estado.jugador.c == destino.c){
-			SolucionEncontrada = true;
+			hijoForward.secuencia.push_back(actFORWARD);
 			nodoActual = hijoForward;
+			SolucionEncontrada = true;
 		} else if(explorados.find(hijoForward) == explorados.end()){
 			hijoForward.secuencia.push_back(actFORWARD);
 			frontera.push_back(hijoForward);
 		}
 
-		if(!SolucionEncontrada){
-			// Generar hijo actTURN_L
-			Nodo hijoTurnL = nodoActual;
-			hijoTurnL.estado = aplicar(actTURN_L, nodoActual.estado);
+        if(!SolucionEncontrada){ // Si no es el destino, generar los hijos
 
-			if(explorados.find(hijoTurnL) == explorados.end()){
-				hijoTurnL.secuencia.push_back(actTURN_L);
-				frontera.push_back(hijoTurnL);
-			}
+            // Generar hijo actTURN_L
+            Nodo hijoTurnL = nodoActual;
+            hijoTurnL.estado = aplicar(actTURN_L, nodoActual.estado);
 
-			// Generar hijo actTURN_R
-			Nodo hijoTurnR = nodoActual;
-			hijoTurnR.estado = aplicar(actTURN_R, nodoActual.estado);
+            if (explorados.find(hijoTurnL) == explorados.end())
+            {
+                hijoTurnL.secuencia.push_back(actTURN_L);
+                frontera.push_back(hijoTurnL);
+            }
 
-			if(explorados.find(hijoTurnR) == explorados.end()){
-				hijoTurnR.secuencia.push_back(actTURN_R);
-				frontera.push_back(hijoTurnR);
+            // Generar hijo actTURN_R
+            Nodo hijoTurnR = nodoActual;
+            hijoTurnR.estado = aplicar(actTURN_R, nodoActual.estado);
+
+            if (explorados.find(hijoTurnR) == explorados.end())
+            {
+                hijoTurnR.secuencia.push_back(actTURN_R);
+                frontera.push_back(hijoTurnR);
+            }
+        }
+
+		if(!SolucionEncontrada && !frontera.empty()){
+			nodoActual = frontera.front();
+
+			while(!frontera.empty() && explorados.find(nodoActual) != explorados.end()){
+				frontera.pop_front();
+
+				if(!frontera.empty())
+					nodoActual = frontera.front();
 			}
 		}
-	}
+    }
 
-	if(SolucionEncontrada){
-		plan = nodoActual.secuencia;
+    if (SolucionEncontrada)
+    {
+        plan = nodoActual.secuencia;
 
-		return plan;
-	}
-	
-	// Si no se encuentra un plan, devolvemos una lista vacía
-	return list<Action>();
+        return plan;
+    }
+
+    // Si no se encuentra un plan, devolvemos una lista vacía
+    return list<Action>();
 }
 
-// list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
-// {
-// 	queue<Nodo *> planBFS;
 
-// 	// COMPLETAR
+list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
+{
 
-// 	list<Action> ruta;
-
-// 	// Construye la lista de nodos en el orden correcto
-// 	while (!planBFS.empty())
-// 	{
-// 		Nodo *nodoActual = planBFS.front();
-// 		ruta.push_back(nodoActual);
-// 		planBFS.pop();
-// 	}
-
-// 	return ruta;
-// }
+}
 
 // list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino)
 // {
@@ -875,3 +896,87 @@ int ComportamientoJugador::interact(Action accion, int valor)
 {
 	return false;
 }
+
+//-----------------------------------------------------------------------------------------------//
+
+void ComportamientoJugador::debug(bool imprimir) const
+{
+	if (imprimir)
+	{
+		cout << "ESTADO actual del JUGADOR:" << endl;
+		cout << "Fila: " << estadoActual.jugador.f << " Columna: " << estadoActual.jugador.c << " Orientacion: " << toString(estadoActual.jugador.brujula) << endl
+			 << endl;
+		cout << "ESTADO actual del SONAMBULO:" << endl;
+		cout << "Fila: " << estadoActual.sonambulo.f << " Columna: " << estadoActual.sonambulo.c << " Orientacion: " << toString(estadoActual.sonambulo.brujula) << endl
+			 << endl;
+		cout << "Nivel: " << nivel << endl;
+		cout << "Bateria: " << bateria << endl;
+		cout << "Primera iteracion: " << (primeraIteracion ? "true" : "false") << endl;
+		cout << "Tiempo: " << tiempo << endl
+			 << endl;
+		cout << "Tiene BIKINI: " << (tieneBikini ? "true" : "false") << endl;
+		cout << "Tiene ZAPATILLAS: " << (tieneZapatillas ? "true" : "false") << endl
+			 << endl;
+		cout << "Ultima Accion del JUGADOR: " << toString(ultimaAccionJugador) << endl;
+		cout << "Ultima Accion del SONAMBULO: " << toString(ultimaAccionSonambulo) << endl
+			 << endl;
+		cout << "Hay plan: " << (hayPlan ? "true" : "false") << endl
+			 << endl;
+	}
+}
+
+string ComportamientoJugador::toString(Orientacion orientacion) const
+{
+	switch (orientacion)
+	{
+	case norte:
+		return "norte";
+	case noreste:
+		return "noreste";
+	case este:
+		return "este";
+	case sureste:
+		return "sureste";
+	case sur:
+		return "sur";
+	case suroeste:
+		return "suroeste";
+	case oeste:
+		return "oeste";
+	case noroeste:
+		return "noroeste";
+	default:
+		return "desconocida";
+	}
+}
+
+string ComportamientoJugador::toString(Action accion) const
+{
+	switch (accion)
+	{
+	case actFORWARD:
+		return "actFORWARD";
+	case actTURN_L:
+		return "actTURN_L";
+	case actTURN_R:
+		return "actTURN_R";
+	case actTURN_SL:
+		return "actTURN_SL";
+	case actTURN_SR:
+		return "actTURN_SR";
+	case actWHEREIS:
+		return "actWHEREIS";
+	case actSON_FORWARD:
+		return "actSON_FORWARD";
+	case actSON_TURN_SL:
+		return "actSON_TURN_SL";
+	case actSON_TURN_SR:
+		return "actSON_TURN_SR";
+	case actIDLE:
+		return "actIDLE";
+	default:
+		return "unknown";
+	}
+}
+
+//-----------------------------------------------------------------------------------------------//
