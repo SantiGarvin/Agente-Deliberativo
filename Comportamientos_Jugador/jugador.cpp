@@ -21,6 +21,10 @@ Action ComportamientoJugador::think(Sensores sensores)
 {
 	Action accion = actIDLE;
 
+	actualizaEstado(sensores);
+	actualizaPosicionOrientacion();
+	actualizaVisionJugador(estadoActual);
+
 	if (sensores.nivel != 4)
 	{
 		// Verificar si es el inicio de la simulación, si hay un reinicio o si es la primera iteración
@@ -31,7 +35,6 @@ Action ComportamientoJugador::think(Sensores sensores)
 		}
 
 		// Actualizar información de los sensores
-		actualizaEstado(sensores);
 		actualizaMapaAux();
 		actualizaGrafo(mapaAux);
 
@@ -48,9 +51,9 @@ Action ComportamientoJugador::think(Sensores sensores)
 			case 0:
 				plan = busquedaAnchuraJugador(estadoActual, destino);
 				break;
-				// case 1:
-				// 	plan = busquedaAnchuraSonambulo();
-				// 	break;
+			case 1:
+				plan = busquedaAnchuraSonambulo(estadoActual, destino);
+				break;
 				// case 2:
 				// 	plan = encuentraCaminoDijkstraJugador();
 				// 	break;
@@ -87,13 +90,26 @@ Action ComportamientoJugador::think(Sensores sensores)
 	}
 	else
 	{
-		actualizaEstado(sensores);
-		actualizaMapaVisionJugador(sensores);
+		actualizaMapaResultVisionJugador(sensores);
 		actualizaGrafo(mapaAux);
 
 		// ------------------
 		// COMPLETAR NIVEL 4
 		// ------------------
+	}
+
+	switch (accion)
+	{
+	case actFORWARD:
+	case actTURN_L:
+	case actTURN_R:
+		ultimaAccionJugador = accion;
+		break;
+	case actSON_FORWARD:
+	case actSON_TURN_SL:
+	case actSON_TURN_SR:
+		ultimaAccionSonambulo = accion;
+		break;
 	}
 
 	return accion;
@@ -157,98 +173,97 @@ void ComportamientoJugador::actualizaEstado(const Sensores &sensores)
 	tiempo = sensores.tiempo;
 }
 
-void ComportamientoJugador::actualizaPosicionOrientacion(bool esJugador)
+void ComportamientoJugador::actualizaPosicionOrientacion()
 {
-	if (esJugador)
+	switch (ultimaAccionJugador)
 	{
-		switch (ultimaAccionJugador)
+	case actFORWARD:
+		switch (estadoActual.jugador.brujula)
 		{
-		case actFORWARD:
-			switch (estadoActual.jugador.brujula)
-			{
-			case norte:
-				estadoActual.jugador.f--;
-				break;
-			case noreste:
-				estadoActual.jugador.f--;
-				estadoActual.jugador.c++;
-				break;
-			case este:
-				estadoActual.jugador.c++;
-				break;
-			case sureste:
-				estadoActual.jugador.f++;
-				estadoActual.jugador.c++;
-				break;
-			case sur:
-				estadoActual.jugador.f++;
-				break;
-			case suroeste:
-				estadoActual.jugador.f++;
-				estadoActual.jugador.c--;
-				break;
-			case oeste:
-				estadoActual.jugador.c--;
-				break;
-			case noroeste:
-				estadoActual.jugador.f--;
-				estadoActual.jugador.c--;
-				break;
-			}
+		case norte:
+			estadoActual.jugador.f--;
 			break;
-		case actTURN_R: // giro a la izquierda 90 grados
-			estadoActual.jugador.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 2) % 8);
+		case noreste:
+			estadoActual.jugador.f--;
+			estadoActual.jugador.c++;
 			break;
-		case actTURN_L: // giro a la derecha 90 grados
-			estadoActual.jugador.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 6) % 8);
+		case este:
+			estadoActual.jugador.c++;
+			break;
+		case sureste:
+			estadoActual.jugador.f++;
+			estadoActual.jugador.c++;
+			break;
+		case sur:
+			estadoActual.jugador.f++;
+			break;
+		case suroeste:
+			estadoActual.jugador.f++;
+			estadoActual.jugador.c--;
+			break;
+		case oeste:
+			estadoActual.jugador.c--;
+			break;
+		case noroeste:
+			estadoActual.jugador.f--;
+			estadoActual.jugador.c--;
 			break;
 		}
+		break;
+	case actTURN_R: // giro a la izquierda 90 grados
+		estadoActual.jugador.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 2) % 8);
+		break;
+	case actTURN_L: // giro a la derecha 90 grados
+		estadoActual.jugador.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 6) % 8);
+		break;
+	default:
+		break;
 	}
-	else // es sonambulo
-	{
-		switch (ultimaAccionSonambulo)
-		{
-		case actSON_FORWARD:
-			switch (estadoActual.sonambulo.brujula)
-			{
 
-			case norte:
-				estadoActual.sonambulo.f--;
-				break;
-			case noreste:
-				estadoActual.sonambulo.f--;
-				estadoActual.sonambulo.c++;
-				break;
-			case este:
-				estadoActual.sonambulo.c++;
-				break;
-			case sureste:
-				estadoActual.sonambulo.f++;
-				estadoActual.sonambulo.c++;
-				break;
-			case sur:
-				estadoActual.sonambulo.f++;
-				break;
-			case suroeste:
-				estadoActual.sonambulo.f++;
-				estadoActual.sonambulo.c--;
-				break;
-			case oeste:
-				estadoActual.sonambulo.c--;
-				break;
-			case noroeste:
-				estadoActual.sonambulo.f--;
-				estadoActual.sonambulo.c--;
-				break;
-			}
+	switch (ultimaAccionSonambulo)
+	{
+	case actSON_FORWARD:
+		switch (estadoActual.sonambulo.brujula)
+		{
+
+		case norte:
+			estadoActual.sonambulo.f--;
 			break;
-		case actTURN_SR: // giro a la derecha 45 grados
-			estadoActual.sonambulo.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 1) % 8);
+		case noreste:
+			estadoActual.sonambulo.f--;
+			estadoActual.sonambulo.c++;
 			break;
-		case actTURN_SL: // giro a la izquierda 45 grados
-			estadoActual.sonambulo.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 7) % 8);
+		case este:
+			estadoActual.sonambulo.c++;
+			break;
+		case sureste:
+			estadoActual.sonambulo.f++;
+			estadoActual.sonambulo.c++;
+			break;
+		case sur:
+			estadoActual.sonambulo.f++;
+			break;
+		case suroeste:
+			estadoActual.sonambulo.f++;
+			estadoActual.sonambulo.c--;
+			break;
+		case oeste:
+			estadoActual.sonambulo.c--;
+			break;
+		case noroeste:
+			estadoActual.sonambulo.f--;
+			estadoActual.sonambulo.c--;
 			break;
 		}
+		break;
+	case actTURN_SR: // giro a la derecha 45 grados
+		estadoActual.sonambulo.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 1) % 8);
+		break;
+	case actTURN_SL: // giro a la izquierda 45 grados
+		estadoActual.sonambulo.brujula = static_cast<Orientacion>((estadoActual.jugador.brujula + 7) % 8);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -339,24 +354,16 @@ void ComportamientoJugador::inicializaVariablesEstado()
 	estadoActual.sonambulo.brujula = norte;
 	tieneBikini = false;
 	tieneZapatillas = false;
+	sonambuloEnVision = false;
 
 	tiempo = 0;
 	hayPlan = false;
 
 	ultimaAccionJugador = actIDLE;
 	ultimaAccionSonambulo = actIDLE;
-}
 
-// void ComportamientoJugador::inicializarGrafo(int tamanio)
-// {
-// 	for (int i = 0; i < tamanio; ++i)
-// 	{
-// 		for (int j = 0; j < tamanio; ++j)
-// 		{
-// 			grafo[i][j] = Nodo(i, j, Orientacion::norte);
-// 		}
-// 	}
-// }
+	vision.resize(16);
+}
 
 void ComportamientoJugador::anularMapaConPlan()
 {
@@ -482,90 +489,179 @@ bool ComportamientoJugador::casillaTransitable(const ubicacion &pos)
 
 list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino)
 {
-    Nodo nodoActual(this);
-    list<Nodo> frontera;
-    set<Nodo> explorados;
-    list<Action> plan;
+	Nodo nodoActual(this);
+	list<Nodo> frontera;
+	set<Nodo> explorados;
+	list<Action> plan;
 
 	// Inicializar el nodo actual
-    nodoActual.estado = origen;
+	nodoActual.estado = origen;
 
 	// Comprobar si el origen es el destino
-    bool SolucionEncontrada = (nodoActual.estado.jugador.f == destino.f && nodoActual.estado.jugador.c == destino.c);
+	bool SolucionEncontrada = (nodoActual.estado.jugador.f == destino.f && nodoActual.estado.jugador.c == destino.c);
 
 	// Si no es el destino, generar los hijos
-    frontera.push_back(nodoActual);
+	frontera.push_back(nodoActual);
 
 	// Mientras haya nodos en la frontera y no se haya encontrado la solución
-    while (!frontera.empty() && !SolucionEncontrada)
-    {
+	while (!frontera.empty() && !SolucionEncontrada)
+	{
 		// Extraer el primer nodo de la frontera
-        frontera.pop_front();
-        explorados.insert(nodoActual);
+		frontera.pop_front();
+		explorados.insert(nodoActual);
 
 		// Gererar hijo actFORWARD
 		Nodo hijoForward = nodoActual;
 		hijoForward.estado = aplicar(actFORWARD, nodoActual.estado);
 
-		if(hijoForward.estado.jugador.f == destino.f && hijoForward.estado.jugador.c == destino.c){
+		if (hijoForward.estado.jugador.f == destino.f && hijoForward.estado.jugador.c == destino.c)
+		{
 			hijoForward.secuencia.push_back(actFORWARD);
 			nodoActual = hijoForward;
 			SolucionEncontrada = true;
-		} else if(explorados.find(hijoForward) == explorados.end()){
+		}
+		else if (explorados.find(hijoForward) == explorados.end())
+		{
 			hijoForward.secuencia.push_back(actFORWARD);
 			frontera.push_back(hijoForward);
 		}
 
-        if(!SolucionEncontrada){ // Si no es el destino, generar los hijos
+		if (!SolucionEncontrada)
+		{ // Si no es el destino, generar los hijos
 
-            // Generar hijo actTURN_L
-            Nodo hijoTurnL = nodoActual;
-            hijoTurnL.estado = aplicar(actTURN_L, nodoActual.estado);
+			// Generar hijo actTURN_L
+			Nodo hijoTurnL = nodoActual;
+			hijoTurnL.estado = aplicar(actTURN_L, nodoActual.estado);
 
-            if (explorados.find(hijoTurnL) == explorados.end())
-            {
-                hijoTurnL.secuencia.push_back(actTURN_L);
-                frontera.push_back(hijoTurnL);
-            }
+			if (explorados.find(hijoTurnL) == explorados.end())
+			{
+				hijoTurnL.secuencia.push_back(actTURN_L);
+				frontera.push_back(hijoTurnL);
+			}
 
-            // Generar hijo actTURN_R
-            Nodo hijoTurnR = nodoActual;
-            hijoTurnR.estado = aplicar(actTURN_R, nodoActual.estado);
+			// Generar hijo actTURN_R
+			Nodo hijoTurnR = nodoActual;
+			hijoTurnR.estado = aplicar(actTURN_R, nodoActual.estado);
 
-            if (explorados.find(hijoTurnR) == explorados.end())
-            {
-                hijoTurnR.secuencia.push_back(actTURN_R);
-                frontera.push_back(hijoTurnR);
-            }
-        }
+			if (explorados.find(hijoTurnR) == explorados.end())
+			{
+				hijoTurnR.secuencia.push_back(actTURN_R);
+				frontera.push_back(hijoTurnR);
+			}
+		}
 
-		if(!SolucionEncontrada && !frontera.empty()){
+		if (!SolucionEncontrada && !frontera.empty())
+		{
 			nodoActual = frontera.front();
 
-			while(!frontera.empty() && explorados.find(nodoActual) != explorados.end()){
+			while (!frontera.empty() && explorados.find(nodoActual) != explorados.end())
+			{
 				frontera.pop_front();
 
-				if(!frontera.empty())
+				if (!frontera.empty())
 					nodoActual = frontera.front();
 			}
 		}
-    }
+	}
 
-    if (SolucionEncontrada)
-    {
-        plan = nodoActual.secuencia;
+	if (SolucionEncontrada)
+	{
+		plan = nodoActual.secuencia;
 
-        return plan;
-    }
+		return plan;
+	}
 
-    // Si no se encuentra un plan, devolvemos una lista vacía
-    return list<Action>();
+	// Si no se encuentra un plan, devolvemos una lista vacía
+	return list<Action>();
 }
-
 
 list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
 {
+	Nodo nodoActual(this);
+	list<Nodo> frontera;
+	set<Nodo> explorados;
+	list<Action> plan;
 
+	// Inicializar el nodo actual con el sonambulo
+	nodoActual.estado = origen;
+
+	// Comprobar si el origen es el destino
+	bool SolucionEncontrada = (nodoActual.estado.sonambulo.f == destino.f && nodoActual.estado.sonambulo.c == destino.c);
+
+	// Si no es el destino, generar los hijos
+	frontera.push_back(nodoActual);
+
+	// Mientras haya nodos en la frontera y no se haya encontrado la solución
+	while (!frontera.empty() && !SolucionEncontrada)
+	{
+		// Extraer el primer nodo de la frontera
+		nodoActual = frontera.front();
+		frontera.pop_front();
+		explorados.insert(nodoActual);
+
+		// Controlar los movimientos del jugador
+		for (Action a : {actFORWARD, actTURN_L, actTURN_R})
+		{
+			Nodo hijo = nodoActual;
+			hijo.estado = aplicar(a, nodoActual.estado);
+			actualizaVisionJugador(hijo.estado);
+
+			if (explorados.find(hijo) == explorados.end())
+			{
+				hijo.secuencia.push_back(a);
+				frontera.push_back(hijo);
+			}
+		}
+
+		// Si el jugador puede ver al sonambulo
+		if (sonambuloEnVision)
+		{
+			// Controlar los movimientos del sonambulo
+			for (Action a : {actSON_FORWARD, actSON_TURN_SL, actSON_TURN_SR})
+			{
+				Nodo hijo = nodoActual;
+				hijo.estado = aplicar(a, nodoActual.estado);
+
+				// Comprobar si el hijo es el destino
+				if (hijo.estado.sonambulo.f == destino.f && hijo.estado.sonambulo.c == destino.c)
+				{
+					hijo.secuencia.push_back(a);
+					nodoActual = hijo;
+					SolucionEncontrada = true;
+					break;
+				}
+				else if (explorados.find(hijo) == explorados.end())
+				{
+					hijo.secuencia.push_back(a);
+					frontera.push_back(hijo);
+				}
+			}
+		}
+
+		// Si no se ha encontrado la solución, y la frontera no está vacía,
+		// actualiza el nodo actual al siguiente nodo en la frontera que no ha sido explorado
+		if (!SolucionEncontrada && !frontera.empty())
+		{
+			nodoActual = frontera.front();
+
+			while (!frontera.empty() && explorados.find(nodoActual) != explorados.end())
+			{
+				frontera.pop_front();
+
+				if (!frontera.empty())
+					nodoActual = frontera.front();
+			}
+		}
+	}
+
+	if (SolucionEncontrada)
+	{
+		plan = nodoActual.secuencia;
+		return plan;
+	}
+
+	// Si no se encuentra un plan, devolvemos una lista vacía
+	return list<Action>();
 }
 
 // list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino)
@@ -625,7 +721,208 @@ list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &orige
 // 	return ruta;
 // }
 
-void ComportamientoJugador::actualizaMapaVisionJugador(const Sensores &sensores)
+void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
+{
+	if (nivel != 4)
+	{
+		const int DIM = 4; // dimension de la vision
+		int indice = 0;
+
+		int f = estado.jugador.f;
+		int c = estado.jugador.c;
+
+		vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+		vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+		sonambuloEnVision = false;
+
+		switch (estadoActual.jugador.brujula)
+		{
+		case norte: // vision Norte
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f - i;
+					int c = estado.jugador.c + j;
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case noreste: // vision Noreste
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f - i;
+					int c = estado.jugador.c + i;
+
+					if (j < 0)
+					{
+						c += j;
+					}
+					else if (j > 0)
+					{
+						f += j;
+					}
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case este: // vision Este
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f + j;
+					int c = estado.jugador.c + i;
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case sureste: // vision Sureste
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f + i;
+					int c = estado.jugador.c + i;
+
+					if (j < 0)
+					{
+						f += j;
+					}
+					else if (j > 0)
+					{
+						c -= j;
+					}
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case sur: // vision Sur
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f + i;
+					int c = estado.jugador.c - j;
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case suroeste: // vision Suroeste
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f + i;
+					int c = estado.jugador.c - i;
+
+					if (j < 0)
+					{
+						c -= j;
+					}
+					else if (j > 0)
+					{
+						f -= j;
+					}
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case oeste: // vision Oeste
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f - j;
+					int c = estado.jugador.c - i;
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		case noroeste: // vision Noroeste
+			for (int i = 1; i <= DIM - 1; i++)
+			{
+				for (int j = -i; j <= i; j++)
+				{
+					int f = estado.jugador.f - i;
+					int c = estado.jugador.c - i;
+
+					if (j < 0)
+					{
+						f -= j;
+					}
+					else if (j > 0)
+					{
+						c += j;
+					}
+
+					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
+						sonambuloEnVision = true;
+
+					indice++;
+				}
+			}
+			break;
+		}
+	}
+}
+
+void ComportamientoJugador::actualizaMapaResultVisionJugador(const Sensores &sensores)
 {
 	const int DIM = 4; // dimension de la vision
 	int indice = 0;

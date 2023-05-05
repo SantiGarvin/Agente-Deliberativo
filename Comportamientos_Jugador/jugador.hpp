@@ -156,16 +156,33 @@ public:
 				else
 					return false;
 				break;
+				// case 1:
+				// if (estado.sonambulo.f < other.estado.sonambulo.f)
+				// 	return true;
+				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c < other.estado.sonambulo.c)
+				// 	return true;
+				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula < other.estado.sonambulo.brujula)
+				// 	return true;
+				// else
+				// 	return false;
+				// break;
 			case 1:
 				if (estado.sonambulo.f < other.estado.sonambulo.f)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f)
-					return estado.sonambulo.c < other.estado.sonambulo.c;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c)
-					return estado.sonambulo.brujula < other.estado.sonambulo.brujula;
+				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c < other.estado.sonambulo.c)
+					return true;
+				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula < other.estado.sonambulo.brujula)
+					return true;
+				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f < other.estado.jugador.f)
+					return true;
+				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c < other.estado.jugador.c)
+					return true;
+				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula < other.estado.jugador.brujula)
+					return true;
 				else
 					return false;
 				break;
+
 				// case 2:
 				// 	if (costoJugador < otherCostoJugador)
 				// 		return true;
@@ -255,6 +272,7 @@ private:
 	int nivel;
 	int bateria;
 	bool primeraIteracion;
+	bool sonambuloEnVision;
 
 	int tiempo;
 
@@ -289,7 +307,7 @@ private:
 	vector<ubicacion> aldeanos;
 	vector<ubicacion> lobos;
 
-	vector<unsigned char> vision;
+	vector<Celda> vision;
 
 	//////////////////////////////////////////////////////////////////
 	// Funciones privadas											//
@@ -297,19 +315,19 @@ private:
 
 	// INICIALIZACION
 	void inicializaVariablesEstado();
-	// void inicializarGrafo(int tamanio);
 
 	// ACTUALIZACIONES
 	void actualizaEstado(const Sensores &sensores);
-	void actualizaPosicionOrientacion(bool esJugador);
+	void actualizaPosicionOrientacion();
 	void actualizaGrafo(const Mapa &mapa);
 	void actualizaMapaAux();
-	void actualizaMapaVisionJugador(const Sensores &sensores);
+	void actualizaVisionJugador(const Estado &estado);
+	void actualizaMapaResultVisionJugador(const Sensores &sensores);
 
 	// FUNCIONES AUXILIARES
 	int calcularCostoBateria(Action accion, unsigned char tipoCasilla);
 	list<Action> busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino);
-	// list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
+	list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
 	// list<Action> encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino);
 	// list<Action> encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino);
 	// list<Action> maximizarPuntuacion(const Estado &origen, const ubicacion &destino);
@@ -326,11 +344,9 @@ private:
 
 	bool casillaTransitable(const ubicacion &pos);
 
-
-
 	//////////////////////////////////////////////////////////////////
-	void debug(bool imprimir) const ;
-	string toString(Orientacion orientacion) const ;
+	void debug(bool imprimir) const;
+	string toString(Orientacion orientacion) const;
 	string toString(Action accion) const;
 	//////////////////////////////////////////////////////////////////
 };
