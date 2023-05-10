@@ -9,12 +9,46 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <thread>
+#include <mutex>
+#include <future>
+#include <semaphore>
+#include <condition_variable>
+#include <algorithm>
 
 using namespace std;
 
 class ComportamientoJugador : public Comportamiento
 {
 public:
+	class Semaphore
+	{
+	public:
+		explicit Semaphore(int count = 0) : count(count) {}
+
+		void notify()
+		{
+			std::unique_lock<std::mutex> lock(mtx);
+			++count;
+			cv.notify_one();
+		}
+
+		void wait()
+		{
+			std::unique_lock<std::mutex> lock(mtx);
+			while (count == 0)
+			{
+				cv.wait(lock);
+			}
+			--count;
+		}
+
+	private:
+		std::mutex mtx;
+		std::condition_variable cv;
+		int count;
+	};
+
 	struct Nodo;
 	typedef vector<vector<Nodo>> Grafo;
 
@@ -95,19 +129,24 @@ public:
 	//////////////////////////////////////////////////////////////////
 	struct Nodo
 	{
+		const Nodo *padre; // Puntero al nodo padre
+
+		Action accion; // Accion realizada
 		Estado estado; // Estado del nodo
 		Celda celda;   // Información de la celda
 
-		list<Action> secuencia; // Acciones que se han realizado para llegar al nodo
+		list<Action> secuencia;				 // Acciones que se han realizado para llegar al nodo
+		shared_ptr<vector<Action>> acciones; // Acciones que se han realizado para llegar al nodo
 
 		int costoAcumulado; // Costo acumulado
 		int costoEstimado;	// Costo estimado hasta la meta (para A*)
 
 		Nodo()
 			: comportamiento{nullptr},
+			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
-			  secuencia{},
+			  acciones{std::make_shared<std::vector<Action>>()},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -115,9 +154,10 @@ public:
 
 		Nodo(ComportamientoJugador *c)
 			: comportamiento{c},
+			  padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
-			  secuencia{},
+			  acciones{std::make_shared<std::vector<Action>>()},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -156,32 +196,38 @@ public:
 				else
 					return false;
 				break;
-				// case 1:
+
+			case 1:
 				// if (estado.sonambulo.f < other.estado.sonambulo.f)
 				// 	return true;
 				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c < other.estado.sonambulo.c)
 				// 	return true;
 				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula < other.estado.sonambulo.brujula)
 				// 	return true;
+				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f < other.estado.jugador.f)
+				// 	return true;
+				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c < other.estado.jugador.c)
+				// 	return true;
+				// else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula < other.estado.jugador.brujula)
+				// 	return true;
 				// else
 				// 	return false;
 				// break;
-			case 1:
-				if (estado.sonambulo.f < other.estado.sonambulo.f)
+
+				if (estado.jugador.f < other.estado.jugador.f)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c < other.estado.sonambulo.c)
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c < other.estado.jugador.c)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula < other.estado.sonambulo.brujula)
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula < other.estado.jugador.brujula)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f < other.estado.jugador.f)
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula == other.estado.jugador.brujula && estado.sonambulo.f < other.estado.sonambulo.f)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c < other.estado.jugador.c)
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula == other.estado.jugador.brujula && estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c < other.estado.sonambulo.c)
 					return true;
-				else if (estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula == other.estado.sonambulo.brujula && estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula < other.estado.jugador.brujula)
+				else if (estado.jugador.f == other.estado.jugador.f && estado.jugador.c == other.estado.jugador.c && estado.jugador.brujula == other.estado.jugador.brujula && estado.sonambulo.f == other.estado.sonambulo.f && estado.sonambulo.c == other.estado.sonambulo.c && estado.sonambulo.brujula < other.estado.sonambulo.brujula)
 					return true;
 				else
 					return false;
-				break;
 
 				// case 2:
 				// 	if (costoJugador < otherCostoJugador)
@@ -244,13 +290,13 @@ public:
 
 	////////////////////////////////////////////////////////////////
 
-	ComportamientoJugador(unsigned int size) : Comportamiento(size), grafo(size, vector<Nodo>(size)), mapaAux(2 * size, vector<Celda>(2 * size))
+	ComportamientoJugador(unsigned int size) : Comportamiento(size), grafo(size, vector<Nodo>(size)), mapaAux(2 * size, vector<Celda>(2 * size)), sem(3)
 	{
 		inicializaVariablesEstado();
 		dimensionMapa = size;
 	}
 
-	ComportamientoJugador(std::vector<std::vector<unsigned char>> mapaR) : Comportamiento(mapaR), grafo(mapaR.size(), vector<Nodo>(mapaR.size())), mapaAux(2 * mapaR.size(), vector<Celda>(2 * mapaR.size()))
+	ComportamientoJugador(std::vector<std::vector<unsigned char>> mapaR) : Comportamiento(mapaR), grafo(mapaR.size(), vector<Nodo>(mapaR.size())), mapaAux(2 * mapaR.size(), vector<Celda>(2 * mapaR.size())), sem(3)
 	{
 		inicializaVariablesEstado();
 		dimensionMapa = mapaR.size();
@@ -281,6 +327,9 @@ private:
 
 	Action ultimaAccionJugador;
 	Action ultimaAccionSonambulo;
+
+	mutex mtx;
+	Semaphore sem;
 
 	//////////////////////////////////////////////////////////////////
 	// Planes														//
@@ -343,6 +392,13 @@ private:
 	Estado aplicar(const Action &a, const Estado &est);
 
 	bool casillaTransitable(const ubicacion &pos);
+
+	bool esDestinoJ(const Estado &nodo, const ubicacion &destino);
+	bool esDestinoS(const Estado &nodo, const ubicacion &destino);
+
+	list<Action> reconstruirCamino(const Nodo *nodoObjetivo);
+
+	void procesarAccion(const Nodo &n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados);
 
 	//////////////////////////////////////////////////////////////////
 	void debug(bool imprimir) const;

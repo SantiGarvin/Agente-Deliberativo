@@ -16,3 +16,4 @@ lib/
 FAQ.md
 README.md
 install.sh
+run_valgrind.sh
