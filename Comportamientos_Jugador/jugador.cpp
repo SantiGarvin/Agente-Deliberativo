@@ -47,8 +47,8 @@ Action ComportamientoJugador::think(Sensores sensores)
 			case 1:
 				plan = busquedaAnchuraSonambulo(estadoActual, destino);
 				break;
-				// case 2:
-				// 	plan = encuentraCaminoDijkstraJugador();
+			case 2:
+				plan = busquedaDijkstraJugador(estadoActual, destino);
 				// 	break;
 				// case 3:
 				// 	plan = encuentraCaminoAStarSonambulo();
@@ -273,8 +273,8 @@ void ComportamientoJugador::actualizaMapaAux()
 	{
 		for (int j = 0; j < mapaResultado[0].size(); ++j)
 		{
-			mapaAux[i][j].terreno = charToTerreno(mapaResultado[i][j]);
-			mapaAux[i][j].superficie = charToEntidad(mapaEntidades[i][j]);
+			mapaAux[i][j].terreno = charATerreno(mapaResultado[i][j]);
+			mapaAux[i][j].superficie = charAEntidad(mapaEntidades[i][j]);
 		}
 	}
 }
@@ -288,13 +288,13 @@ void ComportamientoJugador::actualizaGrafo(const Mapa &mapaAux)
 	{
 		for (int c = 0; c < columnas; ++c)
 		{
-			grafo[f][c].celda.terreno = charToTerreno(mapaAux[f][c].terreno);
-			grafo[f][c].celda.superficie = charToEntidad(mapaAux[f][c].superficie);
+			grafo[f][c].celda.terreno = charATerreno(mapaAux[f][c].terreno);
+			grafo[f][c].celda.superficie = charAEntidad(mapaAux[f][c].superficie);
 		}
 	}
 }
 
-Terreno ComportamientoJugador::charToTerreno(unsigned char c)
+Terreno ComportamientoJugador::charATerreno(unsigned char c)
 {
 	switch (c)
 	{
@@ -321,7 +321,7 @@ Terreno ComportamientoJugador::charToTerreno(unsigned char c)
 	}
 }
 
-Entidad ComportamientoJugador::charToEntidad(unsigned char c)
+Entidad ComportamientoJugador::charAEntidad(unsigned char c)
 {
 	switch (c)
 	{
@@ -442,8 +442,8 @@ ubicacion ComportamientoJugador::siguienteCasilla(const ubicacion &pos)
 		next.c = pos.c - 1;
 		break;
 	}
-		
-	if(next.f < 0 || next.f >= mapaResultado.size() || next.c < 0 || next.c >= mapaResultado.size())
+
+	if (next.f < 0 || next.f >= mapaResultado.size() || next.c < 0 || next.c >= mapaResultado.size())
 		return pos;
 	else
 		return next;
@@ -575,260 +575,132 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen,
 	return list<Action>();
 }
 
-// list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
-// {
-// 	Nodo n(this);
-// 	list<Nodo> frontera;
-// 	set<Nodo> explorados;
-// 	list<Action> plan;
-
-// 	n.estado = origen;
-// 	frontera.push_back(n);
-
-// 	if (esDestinoS(n.estado, destino))
-// 	{
-// 		return list<Action>();
-// 	}
-
-// 	while (!frontera.empty())
-// 	{
-// 		// Extraer el primer nodo de la frontera
-// 		frontera.pop_front();
-// 		explorados.insert(n);
-
-// 		actualizaVisionJugador(n.estado);
-
-// 		// Si el jugador puede ver al sonambulo
-// 		if (sonambuloEnVision)
-// 		{
-// 			// Controlar los movimientos del sonambulo
-// 			for (Action a : {actSON_FORWARD, actSON_TURN_SL, actSON_TURN_SR})
-// 			{
-// 				Nodo hijo = n;
-// 				hijo.estado = aplicar(a, n.estado);
-
-// 				// Comprobar si el hijo es el destino
-// 				if (esDestinoS(hijo.estado, destino))
-// 				{
-// 					hijo.secuencia.push_back(a);
-// 					plan = hijo.secuencia;
-// 					return plan;
-// 				}
-
-// 				if (explorados.find(hijo) == explorados.end())
-// 				{
-// 					hijo.secuencia.push_back(a);
-// 					frontera.push_back(hijo);
-// 				}
-// 			}
-// 		}
-// 		else
-// 		{
-// 			// Controlar los movimientos del jugador
-// 			for (Action a : {actFORWARD, actTURN_L, actTURN_R})
-// 			{
-// 				Nodo hijo = n;
-// 				hijo.estado = aplicar(a, n.estado);
-
-// 				if (explorados.find(hijo) == explorados.end())
-// 				{
-// 					hijo.secuencia.push_back(a);
-// 					frontera.push_back(hijo);
-// 				}
-// 			}
-// 		}
-
-// 		// Si no se ha encontrado la solución, y la frontera no está vacía,
-// 		// actualiza el nodo actual al siguiente nodo en la frontera que no ha sido explorado
-// 		if (!frontera.empty())
-// 		{
-// 			n = frontera.front();
-
-// 			while (!frontera.empty() && explorados.find(n) != explorados.end())
-// 			{
-// 				frontera.pop_front();
-
-// 				if (!frontera.empty())
-// 					n = frontera.front();
-// 			}
-// 		}
-// 	}
-
-// 	// Si no se encuentra un plan, devolvemos una lista vacía
-// 	return list<Action>();
-// }
-
-// list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
-// {
-//     Nodo n(this);
-//     list<Nodo> frontera;
-//     set<Nodo> explorados;
-//     list<Action> plan;
-
-//     n.estado = origen;
-//     n.padre = nullptr;
-//     n.accion = actIDLE;
-//     frontera.push_back(n);
-
-//     if (esDestinoS(n.estado, destino))
-//     {
-//         return list<Action>();
-//     }
-
-//     while (!frontera.empty())
-//     {
-//         // Extraer el primer nodo de la frontera
-//         n = frontera.front();
-//         frontera.pop_front();
-//         explorados.insert(n);
-
-//         actualizaVisionJugador(n.estado);
-
-//         // Si el jugador puede ver al sonambulo
-//         if (sonambuloEnVision)
-//         {
-//             // Controlar los movimientos del sonambulo
-//             for (Action a : {actSON_FORWARD, actSON_TURN_SL, actSON_TURN_SR})
-//             {
-//                 Nodo hijo = n;
-//                 hijo.estado = aplicar(a, n.estado);
-//                 hijo.padre = &n;
-//                 hijo.accion = a;
-
-//                 // Comprobar si el hijo es el destino
-//                 if (esDestinoS(hijo.estado, destino))
-//                 {
-//                     plan = reconstruirCamino(&hijo);
-//                     return plan;
-//                 }
-
-//                 if (explorados.find(hijo) == explorados.end())
-//                 {
-//                     frontera.push_back(hijo);
-//                 }
-//             }
-//         }
-//         else
-//         {
-//             // Controlar los movimientos del jugador
-//             for (Action a : {actFORWARD, actTURN_L, actTURN_R})
-//             {
-//                 Nodo hijo = n;
-//                 hijo.estado = aplicar(a, n.estado);
-//                 hijo.padre = &n;
-//                 hijo.accion = a;
-
-//                 if (explorados.find(hijo) == explorados.end())
-//                 {
-//                     frontera.push_back(hijo);
-//                 }
-//             }
-//         }
-
-//         // Si no se ha encontrado la solución, y la frontera no está vacía,
-//         // actualiza el nodo actual al siguiente nodo en la frontera que no ha sido explorado
-//         if (!frontera.empty())
-//         {
-//             while (!frontera.empty() && explorados.find(frontera.front()) != explorados.end())
-//             {
-//                 frontera.pop_front();
-//             }
-
-//             if (!frontera.empty())
-//                 n = frontera.front();
-//         }
-//     }
-
-//     // Si no se encuentra un plan, devolvemos una lista vacía
-//     return list<Action>();
-// }
-
 list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
 {
-    Nodo n(this);
-    list<Nodo> frontera;
-    set<Nodo> explorados;
+	Nodo n(this);
+	list<Nodo> frontera;
+	set<Nodo> explorados;
 
-    n.estado = origen;
+	n.estado = origen;
 	n.accion = actIDLE;
 
-    frontera.push_back(n);
+	frontera.push_back(n);
 
-	if(esDestinoS(n.estado, destino))
+	if (esDestinoSonambulo(n.estado, destino))
 		return list<Action>();
 
-    while (!frontera.empty())
-    {
-        frontera.pop_front();
-        explorados.insert(n);
+	while (!frontera.empty())
+	{
+		frontera.pop_front();
+		explorados.insert(n);
 
-        actualizaVisionJugador(n.estado);
+		actualizaVisionJugador(n.estado);
 
-        list<Action> acciones;
-        if (sonambuloEnVision)
-        {
-            acciones = {actSON_TURN_SL, actSON_FORWARD, actSON_TURN_SR};
-        }
-        else
-        {
-            acciones = {actTURN_L, actFORWARD, actTURN_R};
-        }
+		list<Action> acciones;
+		if (sonambuloEnVision)
+		{
+			acciones = {actSON_TURN_SL, actSON_FORWARD, actSON_TURN_SR};
+		}
+		else
+		{
+			acciones = {actTURN_L, actFORWARD, actTURN_R};
+		}
 
-        for (Action a : acciones)
-        {
-            procesarAccion(&n, a, frontera, explorados);
+		for (Action a : acciones)
+		{
+			procesarAccion(&n, a, frontera, explorados);
 
-			if (esDestinoS(n.estado, destino))
+			if (esDestinoSonambulo(n.estado, destino))
 			{
 				plan = n.secuencia;
 				return plan;
 			}
-        }
+		}
 
-        while (!frontera.empty() && explorados.find(frontera.front()) != explorados.end())
-        {
-            frontera.pop_front();
-        }
+		while (!frontera.empty() && explorados.find(frontera.front()) != explorados.end())
+		{
+			frontera.pop_front();
+		}
 
-		if(!frontera.empty())
+		if (!frontera.empty())
 			n = frontera.front();
-    }
+	}
 
-    return list<Action>();
+	return list<Action>();
 }
 
 void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados)
 {
-    Nodo hijo = *n;
+	Nodo hijo = *n;
 	hijo.accion = a;
-    hijo.estado = aplicar(a, n->estado);
-    hijo.secuencia = n->secuencia;  // Copia la secuencia del padre
-    hijo.secuencia.push_back(a);    // Agrega la acción actual al final de la secuencia
+	hijo.estado = aplicar(a, n->estado);
+	hijo.secuencia = n->secuencia; // Copia la secuencia del padre
+	hijo.secuencia.push_back(a);   // Agrega la acción actual al final de la secuencia
 
-    if (explorados.find(hijo) == explorados.end())
-    {
-        frontera.push_back(hijo); // Añade el hijo a la frontera
-    }
+	if (explorados.find(hijo) == explorados.end())
+	{
+		frontera.push_back(hijo); // Añade el hijo a la frontera
+	}
 }
 
-// list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino)
-// {
-// 	priority_queue<Nodo *> planDijkstra;
+list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino)
+{
+	// La cola de prioridad contiene pares de (costo, estado)
+	priority_queue<pair<int, Estado>, vector<pair<int, Estado>>, greater<pair<int, Estado>>> cola;
 
-// 	// COMPLETAR
+	// Mapa para almacenar los costos desde el origen hasta cada estado
+	unordered_map<Estado, int, EstadoHasherJugador> costos;
+	costos[origen] = 0;
 
-// 	list<Action> ruta;
+	// Mapa para almacenar el estado anterior y la acción tomada para llegar al estado actual
+	unordered_map<Estado, pair<Estado, Action>, EstadoHasherJugador> estadoAnterior;
 
-// 	// Construye la lista de nodos en el orden correcto
-// 	while (!planDijkstra.empty())
-// 	{
-// 		Nodo *nodoActual = planDijkstra.top();
-// 		ruta.push_front(nodoActual);
-// 		planDijkstra.pop();
-// 	}
+	cola.push(make_pair(0, origen));
 
-// 	return ruta;
-// }
+	while (!cola.empty())
+	{
+		int costoActual = cola.top().first;
+		Estado estadoActual = cola.top().second;
+		cola.pop();
+
+		if (estadoActual.jugador.f == destino.f && estadoActual.jugador.c == destino.c)
+		{
+			break; // Hemos llegado al destino
+		}
+
+		list<Estado> estadosVecinos = getAreaLocalJugador(miMapaACelda(), estadoActual);
+
+		for (Estado &vecino : estadosVecinos)
+		{
+			Action accion = actionToGetThere(estadoActual, vecino);
+			unsigned char tipoCasilla = mapaResultado[vecino.fila][vecino.columna];
+			int costoAccion = calcularCostoBateria(accion, tipoCasilla);
+			int costoNuevo = costoActual + costoAccion;
+
+			if (costos.find(vecino) == costos.end() || costoNuevo < costos[vecino])
+			{
+				costos[vecino] = costoNuevo;
+				estadoAnterior[vecino] = make_pair(estadoActual, accion);
+				cola.push(make_pair(costoNuevo, vecino));
+			}
+		}
+	}
+
+	// Reconstruir el camino a partir del mapa de estado anterior
+	list<Action> ruta;
+	Estado estadoCamino;
+
+	estadoCamino.jugador.f = destino.f;
+	estadoCamino.jugador.c = destino.c;
+
+	while (estadoCamino != origen)
+	{
+		ruta.push_front(estadoAnterior[estadoCamino].second);
+		estadoCamino = estadoAnterior[estadoCamino].first;
+	}
+
+	return ruta;
+}
 
 // list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino)
 // {
@@ -868,12 +740,12 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 // 	return ruta;
 // }
 
-bool ComportamientoJugador::esDestinoJ(const Estado &origen, const ubicacion &destino)
+bool ComportamientoJugador::esDestinoJugador(const Estado &origen, const ubicacion &destino)
 {
 	return (origen.jugador.f == destino.f && origen.jugador.c == destino.c);
 }
 
-bool ComportamientoJugador::esDestinoS(const Estado &origen, const ubicacion &destino)
+bool ComportamientoJugador::esDestinoSonambulo(const Estado &origen, const ubicacion &destino)
 {
 	return (origen.sonambulo.f == destino.f && origen.sonambulo.c == destino.c);
 }
@@ -888,8 +760,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 		int f = estado.jugador.f;
 		int c = estado.jugador.c;
 
-		vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-		vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+		vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+		vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 		indice++;
 
@@ -905,8 +777,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 					int f = estado.jugador.f - i;
 					int c = estado.jugador.c + j;
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -932,8 +804,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 						f += j;
 					}
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -950,8 +822,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 					int f = estado.jugador.f + j;
 					int c = estado.jugador.c + i;
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -977,8 +849,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 						c -= j;
 					}
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -995,8 +867,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 					int f = estado.jugador.f + i;
 					int c = estado.jugador.c - j;
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -1022,8 +894,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 						f -= j;
 					}
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -1040,8 +912,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 					int f = estado.jugador.f - j;
 					int c = estado.jugador.c - i;
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -1067,8 +939,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 						c += j;
 					}
 
-					vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
-					vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+					vision[indice].terreno = charATerreno(mapaResultado[f][c]);
+					vision[indice].superficie = charAEntidad(mapaEntidades[f][c]);
 
 					if (f == estado.sonambulo.f && c == estado.sonambulo.c)
 						sonambuloEnVision = true;
@@ -1277,6 +1149,72 @@ void ComportamientoJugador::actualizaMapaResultVisionJugador(const Sensores &sen
 	}
 }
 
+Mapa ComportamientoJugador::miMapaACelda()
+{
+	vector<vector<Celda>> mapa(mapaResultado.size());
+
+	for (int i = 0; i < mapaResultado.size(); ++i)
+	{
+		for (int j = 0; j < mapaResultado[0].size(); ++j)
+		{
+			mapa[i][j].terreno = mapaResultado[i][j];
+			mapa[i][j].superficie = mapaEntidades[i][j];
+		}
+	}
+
+	return mapa;
+}
+
+vector<vector<Celda>> ComportamientoJugador::getAreaLocalJugador(const vector<vector<Celda>> &mapa, const Estado &estado)
+{
+	int coordenadaXActual = estado.jugador.f;
+	int coordenadaYActual = estado.jugador.c;
+
+	int dimArea = 1;
+	int area = 2 * dimArea + 1;
+
+	vector<vector<Celda>> areaLocal(area, vector<Celda>(area));
+
+	for (int i = -dimArea; i <= dimArea; ++i)
+	{
+		for (int j = -dimArea; j <= dimArea; ++j)
+		{
+			int x = coordenadaXActual + i;
+			int y = coordenadaYActual + j;
+
+			// Verificar que las coordenadas estén dentro del mapa
+			if (x >= 0 && x < mapa.size() && y >= 0 && y < mapa.size())
+				areaLocal[i + dimArea][j + dimArea] = mapa[x][y];
+		}
+	}
+	return areaLocal;
+}
+
+vector<vector<Celda>> ComportamientoJugador::getAreaLocalSonambulo(const vector<vector<Celda>> &mapa, const Estado &estado)
+{
+	int coordenadaXActual = estado.sonambulo.f;
+	int coordenadaYActual = estado.sonambulo.c;
+
+	int dimArea = 1;
+	int area = 2 * dimArea + 1;
+
+	vector<vector<Celda>> areaLocal(area, vector<Celda>(area));
+
+	for (int i = -dimArea; i <= dimArea; ++i)
+	{
+		for (int j = -dimArea; j <= dimArea; ++j)
+		{
+			int x = coordenadaXActual + i;
+			int y = coordenadaYActual + j;
+
+			// Verificar que las coordenadas estén dentro del mapa
+			if (x >= 0 && x < mapa.size() && y >= 0 && y < mapa.size())
+				areaLocal[i + dimArea][j + dimArea] = mapa[x][y];
+		}
+	}
+	return areaLocal;
+}
+
 int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tipoCasilla)
 {
 	int costo = 0;
@@ -1287,13 +1225,13 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 	case actSON_FORWARD:
 		switch (tipoCasilla)
 		{
-		case 'A':
+		case Terreno::Agua:
 			costo = tieneBikini ? 10 : 100;
 			break;
-		case 'B':
+		case Terreno::Bosque:
 			costo = tieneZapatillas ? 15 : 50;
 			break;
-		case 'T':
+		case Terreno::SueloPiedra:
 			costo = 2;
 			break;
 		default:
@@ -1305,13 +1243,13 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 	case actTURN_R:
 		switch (tipoCasilla)
 		{
-		case 'A':
+		case Terreno::Agua:
 			costo = tieneBikini ? 5 : 25;
 			break;
-		case 'B':
+		case Terreno::Bosque:
 			costo = tieneZapatillas ? 1 : 5;
 			break;
-		case 'T':
+		case Terreno::SueloPiedra:
 			costo = 2;
 			break;
 		default:
@@ -1323,13 +1261,13 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 	case actSON_TURN_SR:
 		switch (tipoCasilla)
 		{
-		case 'A':
+		case Terreno::Agua:
 			costo = tieneBikini ? 2 : 7;
 			break;
-		case 'B':
+		case Terreno::Bosque:
 			costo = tieneZapatillas ? 1 : 3;
 			break;
-		case 'T':
+		case Terreno::SueloPiedra:
 			costo = 1;
 			break;
 		default:

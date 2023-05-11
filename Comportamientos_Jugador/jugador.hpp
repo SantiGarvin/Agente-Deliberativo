@@ -5,6 +5,7 @@
 
 #include <list>
 #include <set>
+#include <unordered_map>
 #include <queue>
 #include <vector>
 #include <cmath>
@@ -92,6 +93,22 @@ public:
 		}
 	};
 
+	struct EstadoHasherJugador
+	{
+		size_t operator()(const Estado &estado) const
+		{
+			return hash<int>()(estado.jugador.f) ^ hash<int>()(estado.jugador.c) ^ hash<int>()(estado.jugador.brujula);
+		}
+	};
+
+	struct EstadoHasherSonambulo
+	{
+		size_t operator()(const Estado &estado) const
+		{
+			return hash<int>()(estado.sonambulo.f) ^ hash<int>()(estado.sonambulo.c) ^ hash<int>()(estado.sonambulo.brujula);
+		}
+	};
+
 	//////////////////////////////////////////////////////////////////
 	// Struct NODO													//
 	//////////////////////////////////////////////////////////////////
@@ -101,17 +118,17 @@ public:
 		Estado estado; // Estado del nodo
 		Celda celda;   // Información de la celda
 
-		list<Action> secuencia;				 // Acciones que se han realizado para llegar al nodo
+		list<Action> secuencia; // Acciones que se han realizado para llegar al nodo
 
 		int costoAcumulado; // Costo acumulado
 		int costoEstimado;	// Costo estimado hasta la meta (para A*)
 
 		Nodo()
 			: comportamiento{nullptr},
-			//   padre{nullptr},
+			  //   padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
-			//   acciones{std::make_shared<std::vector<Action>>()},
+			  //   acciones{std::make_shared<std::vector<Action>>()},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -119,10 +136,10 @@ public:
 
 		Nodo(ComportamientoJugador *c)
 			: comportamiento{c},
-			//   padre{nullptr},
+			  //   padre{nullptr},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
-			//   acciones{std::make_shared<std::vector<Action>>()},
+			  //   acciones{std::make_shared<std::vector<Action>>()},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -251,13 +268,11 @@ public:
 	ComportamientoJugador(unsigned int size) : Comportamiento(size), grafo(size, vector<Nodo>(size)), mapaAux(2 * size, vector<Celda>(2 * size))
 	{
 		inicializaVariablesEstado();
-		dimensionMapa = size;
 	}
 
 	ComportamientoJugador(std::vector<std::vector<unsigned char>> mapaR) : Comportamiento(mapaR), grafo(mapaR.size(), vector<Nodo>(mapaR.size())), mapaAux(2 * mapaR.size(), vector<Celda>(2 * mapaR.size()))
 	{
 		inicializaVariablesEstado();
-		dimensionMapa = mapaR.size();
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -292,9 +307,6 @@ private:
 	// Mapas - Ubicaciones											//
 	//////////////////////////////////////////////////////////////////
 
-	const int MAX_MAPA = 100;
-	int dimensionMapa;
-
 	Mapa mapaAux; // solo para nivel 4
 	Grafo grafo;
 	list<Action> plan;
@@ -304,6 +316,7 @@ private:
 	vector<ubicacion> lobos;
 
 	vector<Celda> vision;
+	vector<vector<Celda>> areaLocal;
 
 	//////////////////////////////////////////////////////////////////
 	// Funciones privadas											//
@@ -321,29 +334,32 @@ private:
 	void actualizaMapaResultVisionJugador(const Sensores &sensores);
 
 	// FUNCIONES AUXILIARES
-	int calcularCostoBateria(Action accion, unsigned char tipoCasilla);
 	list<Action> busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino);
 	list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
-	// list<Action> encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino);
+	list<Action> busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino);
 	// list<Action> encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino);
 	// list<Action> maximizarPuntuacion(const Estado &origen, const ubicacion &destino);
 
+	int calcularCostoBateria(Action accion, unsigned char tipoCasilla);
+	
 	ubicacion siguienteCasilla(const ubicacion &pos);
 
 	void anularMapaConPlan();
 	void visualizaPlan(const list<Action> &plan);
 
-	Terreno charToTerreno(unsigned char c);
-	Entidad charToEntidad(unsigned char c);
+	Terreno charATerreno(unsigned char c);
+	Entidad charAEntidad(unsigned char c);
 
 	Estado aplicar(const Action &a, const Estado &est);
 
 	bool casillaTransitable(const ubicacion &pos);
 
-	bool esDestinoJ(const Estado &nodo, const ubicacion &destino);
-	bool esDestinoS(const Estado &nodo, const ubicacion &destino);
+	bool esDestinoJugador(const Estado &nodo, const ubicacion &destino);
+	bool esDestinoSonambulo(const Estado &nodo, const ubicacion &destino);
 
-	// list<Action> reconstruirCamino(const Nodo *nodoObjetivo);
+	Mapa miMapaACelda();
+	vector<vector<Celda>> getAreaLocalJugador(const vector<vector<Celda>> &mapa, const Estado &estado);
+	vector<vector<Celda>> getAreaLocalSonambulo(const vector<vector<Celda>> &mapa, const Estado &estado);
 
 	void procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados);
 
