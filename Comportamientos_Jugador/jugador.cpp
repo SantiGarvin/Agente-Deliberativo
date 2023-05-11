@@ -22,18 +22,11 @@ Action ComportamientoJugador::think(Sensores sensores)
 	Action accion = actIDLE;
 
 	actualizaEstado(sensores);
-	actualizaPosicionOrientacion();
 	actualizaVisionJugador(estadoActual);
+	actualizaPosicionOrientacion();
 
 	if (sensores.nivel != 4)
 	{
-		// Verificar si es el inicio de la simulación, si hay un reinicio o si es la primera iteración
-		if (sensores.reset || primeraIteracion)
-		{
-			primeraIteracion = false; // Cambiar el valor de primeraIteracion a false para que no entre en el if en futuras iteraciones
-			return actWHEREIS;
-		}
-
 		// Actualizar información de los sensores
 		actualizaMapaAux();
 		actualizaGrafo(mapaAux);
@@ -90,6 +83,13 @@ Action ComportamientoJugador::think(Sensores sensores)
 	}
 	else
 	{
+		// Verificar si es el inicio de la simulación, si hay un reinicio o si es la primera iteración
+		if (sensores.reset || primeraIteracion)
+		{
+			primeraIteracion = false; // Cambiar el valor de primeraIteracion a false para que no entre en el if en futuras iteraciones
+			return actWHEREIS;
+		}
+
 		actualizaMapaResultVisionJugador(sensores);
 		actualizaGrafo(mapaAux);
 
@@ -284,10 +284,6 @@ void ComportamientoJugador::actualizaGrafo(const Mapa &mapaAux)
 	int filas = grafo.size();
 	int columnas = grafo[0].size();
 
-	// Coordenadas de desplazamiento: arriba, derecha, abajo, izquierda, y las diagonales.
-	int dfil[] = {-1, 0, 1, 0, -1, 1, 1, -1};
-	int dcol[] = {0, 1, 0, -1, 1, 1, -1, -1};
-
 	for (int f = 0; f < filas; ++f)
 	{
 		for (int c = 0; c < columnas; ++c)
@@ -446,7 +442,11 @@ ubicacion ComportamientoJugador::siguienteCasilla(const ubicacion &pos)
 		next.c = pos.c - 1;
 		break;
 	}
-	return next;
+		
+	if(next.f < 0 || next.f >= mapaResultado.size() || next.c < 0 || next.c >= mapaResultado.size())
+		return pos;
+	else
+		return next;
 }
 
 Estado ComportamientoJugador::aplicar(const Action &a, const Estado &st)
@@ -743,106 +743,72 @@ list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen,
 //     return list<Action>();
 // }
 
-void ComportamientoJugador::procesarAccion(const Nodo &n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados)
-{
-    Nodo hijo = n;
-    hijo.estado = aplicar(a, n.estado);
-    hijo.padre = &n;
-    hijo.accion = a;
-
-    {
-        std::unique_lock<std::mutex> lock(mtx);
-
-        bool estadoNoExplorado = explorados.find(hijo) == explorados.end();
-        bool estadoNoEnFrontera = std::none_of(frontera.begin(), frontera.end(), [&](const Nodo &nodo) { return nodo == hijo; });
-
-        if (estadoNoExplorado && estadoNoEnFrontera)
-        {
-            hijo.padre = &n;
-            hijo.accion = a;
-
-            // Crea una nueva instancia de shared_ptr con una copia del vector de acciones del padre
-            hijo.acciones = std::make_shared<std::vector<Action>>(*n.acciones);
-            hijo.acciones->push_back(a); // Añade la nueva acción al vector de acciones
-
-            frontera.push_back(hijo); // Añade el hijo a la frontera
-        }
-
-        sem.notify(); // Libera un permiso en el semáforo
-    }
-}
-
-
-
-
 list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino)
 {
-	Nodo n(this);
-	list<Nodo> frontera;
-	set<Nodo> explorados;
-	// list<Action> plan;
+    Nodo n(this);
+    list<Nodo> frontera;
+    set<Nodo> explorados;
 
-	n.estado = origen;
-	n.padre = nullptr;
+    n.estado = origen;
 	n.accion = actIDLE;
 
-	frontera.push_back(n);
+    frontera.push_back(n);
 
-	while (!frontera.empty())
-	{
-		if (esDestinoS(n.estado, destino))
-		{
-			plan = reconstruirCamino(&n);
-			return plan;
-		}
+	if(esDestinoS(n.estado, destino))
+		return list<Action>();
 
-		frontera.pop_front();
-		explorados.insert(n);
+    while (!frontera.empty())
+    {
+        frontera.pop_front();
+        explorados.insert(n);
 
-		actualizaVisionJugador(n.estado);
+        actualizaVisionJugador(n.estado);
 
-		vector<future<void>> futures;
+        list<Action> acciones;
+        if (sonambuloEnVision)
+        {
+            acciones = {actSON_TURN_SL, actSON_FORWARD, actSON_TURN_SR};
+        }
+        else
+        {
+            acciones = {actTURN_L, actFORWARD, actTURN_R};
+        }
 
-		if (sonambuloEnVision)
-		{
-			for (Action a : {actSON_FORWARD, actSON_TURN_SL, actSON_TURN_SR})
+        for (Action a : acciones)
+        {
+            procesarAccion(&n, a, frontera, explorados);
+
+			if (esDestinoS(n.estado, destino))
 			{
-				sem.wait(); // Adquiere un permiso en el semáforo
-				futures.push_back(std::async(std::launch::async, &ComportamientoJugador::procesarAccion, this, n, a, std::ref(frontera), std::ref(explorados)));
+				plan = n.secuencia;
+				return plan;
 			}
-		}
-		else
-		{
-			for (Action a : {actFORWARD, actTURN_L, actTURN_R})
-			{
-				sem.wait(); // Adquiere un permiso en el semáforo
-				futures.push_back(std::async(std::launch::async, &ComportamientoJugador::procesarAccion, this, n, a, std::ref(frontera), std::ref(explorados)));
-			}
-		}
+        }
 
-		for (std::future<void> &f : futures)
-		{
-			f.get();
-		}
+        while (!frontera.empty() && explorados.find(frontera.front()) != explorados.end())
+        {
+            frontera.pop_front();
+        }
 
-		if (!frontera.empty())
-		{
-			while (!frontera.empty() && explorados.find(frontera.front()) != explorados.end())
-			{
-				frontera.pop_front();
-			}
+		if(!frontera.empty())
+			n = frontera.front();
+    }
 
-			if (!frontera.empty())
-				n = frontera.front();
-		}
-	}
-
-	return list<Action>();
+    return list<Action>();
 }
 
-list<Action> ComportamientoJugador::reconstruirCamino(const Nodo *objetivo)
+void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados)
 {
-	return list<Action>(objetivo->acciones->begin(), objetivo->acciones->end());
+    Nodo hijo = *n;
+	hijo.accion = a;
+    hijo.estado = aplicar(a, n->estado);
+    hijo.secuencia = n->secuencia;  // Copia la secuencia del padre
+    hijo.secuencia.push_back(a);    // Agrega la acción actual al final de la secuencia
+
+    if (explorados.find(hijo) == explorados.end())
+    {
+        frontera.push_back(hijo); // Añade el hijo a la frontera
+    }
 }
 
 // list<Action> ComportamientoJugador::encuentraCaminoDijkstraJugador(const Estado &origen, const ubicacion &destino)
@@ -924,6 +890,8 @@ void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
 
 		vision[indice].terreno = charToTerreno(mapaResultado[f][c]);
 		vision[indice].superficie = charToEntidad(mapaEntidades[f][c]);
+
+		indice++;
 
 		sonambuloEnVision = false;
 
