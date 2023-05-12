@@ -668,20 +668,23 @@ list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen
 			break; // Hemos llegado al destino
 		}
 
-		list<Estado> estadosVecinos = getAreaLocalJugador(miMapaACelda(), estadoActual);
+		vector<vector<Celda>> celdasVecinas = getAreaLocalJugador(getMapaCeldas(), estadoActual);
 
-		for (Estado &vecino : estadosVecinos)
+		for (vector<Celda> celdas : celdasVecinas)
 		{
-			Action accion = actionToGetThere(estadoActual, vecino);
-			unsigned char tipoCasilla = mapaResultado[vecino.fila][vecino.columna];
-			int costoAccion = calcularCostoBateria(accion, tipoCasilla);
-			int costoNuevo = costoActual + costoAccion;
-
-			if (costos.find(vecino) == costos.end() || costoNuevo < costos[vecino])
+			for (Celda c : celdas)
 			{
-				costos[vecino] = costoNuevo;
-				estadoAnterior[vecino] = make_pair(estadoActual, accion);
-				cola.push(make_pair(costoNuevo, vecino));
+				Action accion = actionToGetThere(estadoActual, celda);
+				unsigned char tipoCasilla = mapaResultado[celda.fila][celda.columna];
+				int costoAccion = calcularCostoBateria(accion, tipoCasilla);
+				int costoNuevo = costoActual + costoAccion;
+
+				if (costos.find(celda) == costos.end() || costoNuevo < costos[celda])
+				{
+					costos[celda] = costoNuevo;
+					estadoAnterior[celda] = make_pair(estadoActual, accion);
+					cola.push(make_pair(costoNuevo, celda));
+				}
 			}
 		}
 	}
@@ -748,6 +751,59 @@ bool ComportamientoJugador::esDestinoJugador(const Estado &origen, const ubicaci
 bool ComportamientoJugador::esDestinoSonambulo(const Estado &origen, const ubicacion &destino)
 {
 	return (origen.sonambulo.f == destino.f && origen.sonambulo.c == destino.c);
+}
+
+Action ComportamientoJugador::mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Agente agente)
+{
+    int minCosto = INT_MAX;
+    Action mejorAccion = actIDLE;
+
+    // Definir las direcciones posibles según el agente
+    vector<Orientacion> direcciones;
+    if (agente == Entidad::Jugador)
+    {
+        direcciones = {norte, este, sur, oeste};
+    }
+    else if (agente == Entidad::Sonambulo)
+    {
+        direcciones = {norte, noreste, este, sureste, sur, suroeste, oeste, noroeste};
+    }
+
+    // Recorrer las direcciones posibles y encontrar la de menor coste
+    for (const auto &direccion : direcciones)
+    {
+        ubicacion posActual = {estado.jugador.f, estado.jugador.c, direccion};
+        ubicacion siguientePos = siguienteCasilla(posActual);
+
+        // Verificar que la siguiente casilla es válida (no fuera del mapa)
+        if (siguientePos.f == posActual.f && siguientePos.c == posActual.c)
+        {
+            continue;
+        }
+
+        int costo = calcularCostoBateria(actFORWARD, mapa[siguientePos.f][siguientePos.c].terreno);
+        if (costo < minCosto)
+        {
+            minCosto = costo;
+            mejorAccion = actFORWARD;
+        }
+    }
+
+    return mejorAccion;
+}
+
+const vector<vector<ComportamientoJugador::Celda>> &ComportamientoJugador::getMapaCeldas()
+{
+	for (int i = 0; i < mapaResultado.size(); ++i)
+	{
+		for (int j = 0; j < mapaResultado[0].size(); ++j)
+		{
+			mapaCeldas[i][j].terreno = mapaResultado[i][j];
+			mapaCeldas[i][j].superficie = mapaEntidades[i][j];
+		}
+	}
+
+	return mapaCeldas;
 }
 
 void ComportamientoJugador::actualizaVisionJugador(const Estado &estado)
@@ -1147,22 +1203,6 @@ void ComportamientoJugador::actualizaMapaResultVisionJugador(const Sensores &sen
 		}
 		break;
 	}
-}
-
-Mapa ComportamientoJugador::miMapaACelda()
-{
-	vector<vector<Celda>> mapa(mapaResultado.size());
-
-	for (int i = 0; i < mapaResultado.size(); ++i)
-	{
-		for (int j = 0; j < mapaResultado[0].size(); ++j)
-		{
-			mapa[i][j].terreno = mapaResultado[i][j];
-			mapa[i][j].superficie = mapaEntidades[i][j];
-		}
-	}
-
-	return mapa;
 }
 
 vector<vector<Celda>> ComportamientoJugador::getAreaLocalJugador(const vector<vector<Celda>> &mapa, const Estado &estado)

@@ -204,16 +204,16 @@ public:
 				else
 					return false;
 				break;
-				// case 2:
-				// 	if (costoJugador < otherCostoJugador)
-				// 		return true;
-				// 	else if (costoJugador == otherCostoJugador)
-				// 		return estado.jugador.c < other.estado.jugador.c;
-				// 	else if (costoJugador == otherCostoJugador && estado.jugador.c == other.estado.jugador.c)
-				// 		return estado.jugador.brujula < other.estado.jugador.brujula;
-				// 	else
-				// 		return false;
-				// 	break;
+				case 2:
+					if (costoAcumulado < other.costoAcumulado)
+						return true;
+					else if (costoAcumulado == other.costoAcumulado)
+						return estado.jugador.c < other.estado.jugador.c;
+					else if (costoAcumulado == other.costoAcumulado && estado.jugador.c == other.estado.jugador.c)
+						return estado.jugador.brujula < other.estado.jugador.brujula;
+					else
+						return false;
+					break;
 				// case 3:
 				// 	if (costoSonambulo < otherCostoSonambulo)
 				// 		return true;
@@ -307,9 +307,9 @@ private:
 	// Mapas - Ubicaciones											//
 	//////////////////////////////////////////////////////////////////
 
+	Mapa mapaCeldas;
 	Mapa mapaAux; // solo para nivel 4
 	Grafo grafo;
-	list<Action> plan;
 
 	vector<ubicacion> sonambulos;
 	vector<ubicacion> aldeanos;
@@ -357,12 +357,14 @@ private:
 	bool esDestinoJugador(const Estado &nodo, const ubicacion &destino);
 	bool esDestinoSonambulo(const Estado &nodo, const ubicacion &destino);
 
-	Mapa miMapaACelda();
+	const vector<vector<Celda>> &getMapaCeldas();
 	vector<vector<Celda>> getAreaLocalJugador(const vector<vector<Celda>> &mapa, const Estado &estado);
 	vector<vector<Celda>> getAreaLocalSonambulo(const vector<vector<Celda>> &mapa, const Estado &estado);
 
 	void procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados);
 
+	Action mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente)
+	
 	//////////////////////////////////////////////////////////////////
 	void debug(bool imprimir) const;
 	string toString(Orientacion orientacion) const;
