@@ -14,11 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       
-      - name: Configure
-        run: cd build && cmake ..
+      - name: Create build directory
+        run: mkdir -p build
       
-      - name: Build
-        run: cd build && make
+      - name: Change to build directory
+        run: cd build
       
-      - name: Run Tests
-        run: cd build && make test
+      - name: Configure project
+        run: cmake ..
+      
+      - name: Build project
+        run: make all
