@@ -8,16 +8,17 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: configure
-      run: ./build/configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Configure
+        run: cd build && cmake ..
+      
+      - name: Build
+        run: cd build && make
+      
+      - name: Run Tests
+        run: cd build && make test
