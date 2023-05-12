@@ -13,15 +13,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      
+
+      - name: Install dependencies
+        run: sudo apt-get install build-essential cmake
+
       - name: Create build directory
         run: mkdir -p build
-      
-      - name: Change to build directory
-        run: cd build
-      
+
       - name: Configure project
-        run: cmake ..
-      
+        run: cmake -S . -B build
+
       - name: Build project
-        run: make all
+        run: cmake --build build
+
+      # Opcional: Ejecuta pruebas si las tienes
+      - name: Run tests
+        working-directory: build
+        run: ctest
