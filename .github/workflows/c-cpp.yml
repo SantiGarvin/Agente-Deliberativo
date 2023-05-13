@@ -13,15 +13,23 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      
+
+      - name: Install dependencies on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake freeglut3 freeglut3-dev libjpeg-dev libopenmpi-dev openmpi-bin openmpi-doc libxmu-dev libxi-dev libboost-all-dev
+
       - name: Create build directory
         run: mkdir -p build
-      
-      - name: Change to build directory
-        run: cd build
-      
+
       - name: Configure project
-        run: cmake ..
-      
+        run: cmake -S . -B build
+
       - name: Build project
-        run: make all
+        run: cmake --build build
+
+      # Opcional: Ejecuta pruebas si las tienes
+      - name: Run tests
+        working-directory: build
+        run: ctest
