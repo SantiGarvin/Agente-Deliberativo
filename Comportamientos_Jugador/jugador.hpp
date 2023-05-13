@@ -12,6 +12,8 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
+#include <limits>
+#include <sstream>
 
 using namespace std;
 
@@ -145,6 +147,17 @@ public:
 		{
 		}
 
+		Nodo(ComportamientoJugador *c, Action a, const Estado &e, const Celda &cd, const list<Action> &seq, int costoAcum, int costoEst)
+			: comportamiento{c},
+			  accion{a},
+			  estado{e},
+			  celda{cd},
+			  secuencia{seq},
+			  costoAcumulado{costoAcum},
+			  costoEstimado{costoEst}
+		{
+		}
+
 		// bool operator<(const Nodo &other) const
 		// {
 		// 	int costoThis = costoAcumulado + heuristica;
@@ -204,16 +217,16 @@ public:
 				else
 					return false;
 				break;
-				case 2:
-					if (costoAcumulado < other.costoAcumulado)
-						return true;
-					else if (costoAcumulado == other.costoAcumulado)
-						return estado.jugador.c < other.estado.jugador.c;
-					else if (costoAcumulado == other.costoAcumulado && estado.jugador.c == other.estado.jugador.c)
-						return estado.jugador.brujula < other.estado.jugador.brujula;
-					else
-						return false;
-					break;
+			case 2:
+				if (costoAcumulado < other.costoAcumulado)
+					return true;
+				else if (costoAcumulado == other.costoAcumulado)
+					return estado.jugador.c < other.estado.jugador.c;
+				else if (costoAcumulado == other.costoAcumulado && estado.jugador.c == other.estado.jugador.c)
+					return estado.jugador.brujula < other.estado.jugador.brujula;
+				else
+					return false;
+				break;
 				// case 3:
 				// 	if (costoSonambulo < otherCostoSonambulo)
 				// 		return true;
@@ -303,6 +316,8 @@ private:
 
 	bool hayPlan;
 
+	list<Action> plan;
+
 	//////////////////////////////////////////////////////////////////
 	// Mapas - Ubicaciones											//
 	//////////////////////////////////////////////////////////////////
@@ -336,12 +351,12 @@ private:
 	// FUNCIONES AUXILIARES
 	list<Action> busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino);
 	list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
-	list<Action> busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino);
+	// list<Action> busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino);
 	// list<Action> encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino);
 	// list<Action> maximizarPuntuacion(const Estado &origen, const ubicacion &destino);
 
 	int calcularCostoBateria(Action accion, unsigned char tipoCasilla);
-	
+
 	ubicacion siguienteCasilla(const ubicacion &pos);
 
 	void anularMapaConPlan();
@@ -363,8 +378,11 @@ private:
 
 	void procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados);
 
-	Action mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente)
-	
+	Action mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente);
+
+	Nodo aplicarAccionYActualizarCosto(const Nodo &nodo, const Action &accion);
+
+	string generarClave(const Estado &estado);
 	//////////////////////////////////////////////////////////////////
 	void debug(bool imprimir) const;
 	string toString(Orientacion orientacion) const;

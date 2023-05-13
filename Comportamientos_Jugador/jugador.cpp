@@ -47,8 +47,8 @@ Action ComportamientoJugador::think(Sensores sensores)
 			case 1:
 				plan = busquedaAnchuraSonambulo(estadoActual, destino);
 				break;
-			case 2:
-				plan = busquedaDijkstraJugador(estadoActual, destino);
+			// case 2:
+			// 	plan = busquedaDijkstraJugador(estadoActual, destino);
 				// 	break;
 				// case 3:
 				// 	plan = encuentraCaminoAStarSonambulo();
@@ -612,8 +612,7 @@ list<Action> ComportamientoJugador::busquedaAnchuraSonambulo(const Estado &orige
 
 			if (esDestinoSonambulo(n.estado, destino))
 			{
-				plan = n.secuencia;
-				return plan;
+				return n.secuencia;
 			}
 		}
 
@@ -643,67 +642,96 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 	}
 }
 
-list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino)
-{
-	// La cola de prioridad contiene pares de (costo, estado)
-	priority_queue<pair<int, Estado>, vector<pair<int, Estado>>, greater<pair<int, Estado>>> cola;
+// list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino)
+// {
+	
+// }
+// {
+// 	priority_queue<Nodo, vector<Nodo>, greater<Nodo>> cola;
+// 	unordered_map<string, Nodo, EstadoHasherJugador> visitados;
 
-	// Mapa para almacenar los costos desde el origen hasta cada estado
-	unordered_map<Estado, int, EstadoHasherJugador> costos;
-	costos[origen] = 0;
+// 	// Crear nodos iniciales con todas las orientaciones posibles para el jugador principal
+// 	for (int orientacion = 0; orientacion < 8; ++orientacion)
+// 	{
+// 		if (orientacion % 2 != 0) // Solo orientaciones a 90 grados
+// 		{
+// 			continue;
+// 		}
 
-	// Mapa para almacenar el estado anterior y la acción tomada para llegar al estado actual
-	unordered_map<Estado, pair<Estado, Action>, EstadoHasherJugador> estadoAnterior;
+// 		Estado estadoInicial = origen;
+// 		estadoInicial.jugador.brujula = static_cast<Orientacion>(orientacion);
+// 		Nodo nodoInicial(this, actIDLE, estadoInicial, getMapaCeldas()[estadoInicial.jugador.f][estadoInicial.jugador.c], {}, 0, 0);
+// 		cola.push(nodoInicial);
+// 	}
 
-	cola.push(make_pair(0, origen));
+// 	while (!cola.empty())
+// 	{
+// 		Nodo actual = cola.top();
+// 		cola.pop();
 
-	while (!cola.empty())
-	{
-		int costoActual = cola.top().first;
-		Estado estadoActual = cola.top().second;
-		cola.pop();
+// 		string claveActual = generarClave(actual.estado);
 
-		if (estadoActual.jugador.f == destino.f && estadoActual.jugador.c == destino.c)
-		{
-			break; // Hemos llegado al destino
-		}
+// 		if (visitados.find(claveActual) != visitados.end())
+// 		{
+// 			continue;
+// 		}
 
-		vector<vector<Celda>> celdasVecinas = getAreaLocalJugador(getMapaCeldas(), estadoActual);
+// 		visitados[claveActual] = actual;
 
-		for (vector<Celda> celdas : celdasVecinas)
-		{
-			for (Celda c : celdas)
-			{
-				Action accion = actionToGetThere(estadoActual, celda);
-				unsigned char tipoCasilla = mapaResultado[celda.fila][celda.columna];
-				int costoAccion = calcularCostoBateria(accion, tipoCasilla);
-				int costoNuevo = costoActual + costoAccion;
+// 		if (actual.estado.jugador.f == destino.f && actual.estado.jugador.c == destino.c)
+// 		{
+// 			return actual.secuencia;
+// 		}
 
-				if (costos.find(celda) == costos.end() || costoNuevo < costos[celda])
-				{
-					costos[celda] = costoNuevo;
-					estadoAnterior[celda] = make_pair(estadoActual, accion);
-					cola.push(make_pair(costoNuevo, celda));
-				}
-			}
-		}
-	}
+// 		vector<Action> accionesPosibles = {actFORWARD, actTURN_L, actTURN_R};
 
-	// Reconstruir el camino a partir del mapa de estado anterior
-	list<Action> ruta;
-	Estado estadoCamino;
+// 		for (const auto &accion : accionesPosibles)
+// 		{
+// 			Nodo sucesor = aplicarAccionYActualizarCosto(actual, accion);
+// 			string claveSucesor = generarClave(sucesor.estado);
 
-	estadoCamino.jugador.f = destino.f;
-	estadoCamino.jugador.c = destino.c;
+// 			if (visitados.find(claveSucesor) == visitados.end())
+// 			{
+// 				cola.push(sucesor);
+// 			}
+// 		}
+// 	}
 
-	while (estadoCamino != origen)
-	{
-		ruta.push_front(estadoAnterior[estadoCamino].second);
-		estadoCamino = estadoAnterior[estadoCamino].first;
-	}
+// 	// Si no se encuentra una solución, devolver una lista vacía
+// 	return list<Action>();
+// }
 
-	return ruta;
-}
+// string ComportamientoJugador::generarClave(const Estado &estado) {
+//     stringstream clave;
+//     clave << estado.jugador.f << "," << estado.jugador.c << "," << estado.jugador.brujula << "_"
+//           << estado.sonambulo.f << "," << estado.sonambulo.c << "," << estado.sonambulo.brujula;
+//     return clave.str();
+// }
+
+
+// Nodo ComportamientoJugador::aplicarAccionYActualizarCosto(const Nodo &nodo, const Action &accion)
+// {
+// 	// Aplicamos la acción al estado actual del nodo.
+// 	Estado estadoNuevo = aplicar(accion, nodo.estado);
+
+// 	// Verificamos si la casilla resultante es transitable.
+// 	ubicacion nuevaUbicacionJugador = estadoNuevo.jugador;
+// 	if (!casillaTransitable(nuevaUbicacionJugador))
+// 	{
+// 		return nodo; // Retornamos el nodo original si la casilla no es transitable.
+// 	}
+
+// 	// Calculamos el costo de batería asociado con la acción.
+// 	Celda celdaActual = mapaCeldas[nuevaUbicacionJugador.f][nuevaUbicacionJugador.c];
+// 	int costoBateria = calcularCostoBateria(accion, celdaActual.terreno);
+
+// 	// Creamos un nuevo nodo con el estado actualizado y el costo de batería actualizado.
+// 	Nodo nodoNuevo = nodo;
+// 	nodoNuevo.estado = estadoNuevo;
+// 	nodoNuevo.costoAcumulado += costoBateria;
+
+// 	return nodoNuevo;
+// }
 
 // list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino)
 // {
@@ -753,43 +781,43 @@ bool ComportamientoJugador::esDestinoSonambulo(const Estado &origen, const ubica
 	return (origen.sonambulo.f == destino.f && origen.sonambulo.c == destino.c);
 }
 
-Action ComportamientoJugador::mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Agente agente)
+Action ComportamientoJugador::mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente)
 {
-    int minCosto = INT_MAX;
-    Action mejorAccion = actIDLE;
+	int minCosto = numeric_limits<int>::max();
+	Action mejorAccion = actIDLE;
 
-    // Definir las direcciones posibles según el agente
-    vector<Orientacion> direcciones;
-    if (agente == Entidad::Jugador)
-    {
-        direcciones = {norte, este, sur, oeste};
-    }
-    else if (agente == Entidad::Sonambulo)
-    {
-        direcciones = {norte, noreste, este, sureste, sur, suroeste, oeste, noroeste};
-    }
+	// Definir las direcciones posibles según el agente
+	vector<Orientacion> direcciones;
+	if (agente == Entidad::Jugador)
+	{
+		direcciones = {norte, este, sur, oeste};
+	}
+	else if (agente == Entidad::Sonambulo)
+	{
+		direcciones = {norte, noreste, este, sureste, sur, suroeste, oeste, noroeste};
+	}
 
-    // Recorrer las direcciones posibles y encontrar la de menor coste
-    for (const auto &direccion : direcciones)
-    {
-        ubicacion posActual = {estado.jugador.f, estado.jugador.c, direccion};
-        ubicacion siguientePos = siguienteCasilla(posActual);
+	// Recorrer las direcciones posibles y encontrar la de menor coste
+	for (const auto &direccion : direcciones)
+	{
+		ubicacion posActual = {estado.jugador.f, estado.jugador.c, direccion};
+		ubicacion siguientePos = siguienteCasilla(posActual);
 
-        // Verificar que la siguiente casilla es válida (no fuera del mapa)
-        if (siguientePos.f == posActual.f && siguientePos.c == posActual.c)
-        {
-            continue;
-        }
+		// Verificar que la siguiente casilla es válida (no fuera del mapa)
+		if (siguientePos.f == posActual.f && siguientePos.c == posActual.c)
+		{
+			continue;
+		}
 
-        int costo = calcularCostoBateria(actFORWARD, mapa[siguientePos.f][siguientePos.c].terreno);
-        if (costo < minCosto)
-        {
-            minCosto = costo;
-            mejorAccion = actFORWARD;
-        }
-    }
+		int costo = calcularCostoBateria(actFORWARD, mapa[siguientePos.f][siguientePos.c].terreno);
+		if (costo < minCosto)
+		{
+			minCosto = costo;
+			mejorAccion = actFORWARD;
+		}
+	}
 
-    return mejorAccion;
+	return mejorAccion;
 }
 
 const vector<vector<ComportamientoJugador::Celda>> &ComportamientoJugador::getMapaCeldas()
@@ -1261,7 +1289,7 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 
 	switch (accion)
 	{
-	case actFORWARD: // ActFORWARD y actSON_FORWARD
+	case actFORWARD:
 	case actSON_FORWARD:
 		switch (tipoCasilla)
 		{
@@ -1279,7 +1307,7 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 			break;
 		}
 		break;
-	case actTURN_L: // actTURN_L y actTURN_R
+	case actTURN_L:
 	case actTURN_R:
 		switch (tipoCasilla)
 		{
@@ -1297,7 +1325,7 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 			break;
 		}
 		break;
-	case actSON_TURN_SL: // actSON_TURN_SL y actSON_TURN_SR
+	case actSON_TURN_SL:
 	case actSON_TURN_SR:
 		switch (tipoCasilla)
 		{
@@ -1315,10 +1343,10 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 			break;
 		}
 		break;
-	case actWHEREIS: // actWHEREIS
+	case actWHEREIS:
 		costo = 200;
 		break;
-	case actIDLE: // actIDLE
+	case actIDLE:
 		costo = 0;
 		break;
 	}
