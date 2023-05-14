@@ -72,43 +72,91 @@ public:
 		}
 	};
 
+	struct Objeto
+	{
+		bool zapatillas;
+		bool bikini;
+
+		Objeto() : zapatillas(false), bikini(false) {}
+
+		bool operator==(const Objeto &o) const
+		{
+			return zapatillas == o.zapatillas && bikini == o.bikini;
+		}
+	};
+
 	struct Estado
 	{
 		ubicacion jugador;
 		ubicacion sonambulo;
 
+		Objeto objetoJugador;
+		Objeto objetoSonambulo;
+
 		Estado()
+			: comportamiento{nullptr},
+			  jugador{-1, -1, Orientacion::norte},
+			  sonambulo{-1, -1, Orientacion::norte}
 		{
-			jugador = {-1, -1, Orientacion::norte};
-			sonambulo = {-1, -1, Orientacion::norte};
 		}
 
-		Estado(ubicacion uj, ubicacion us)
+		Estado(ComportamientoJugador *c)
+			: comportamiento{c},
+			  jugador{-1, -1, Orientacion::norte},
+			  sonambulo{-1, -1, Orientacion::norte}
 		{
-			jugador = uj;
-			sonambulo = us;
+		}
+
+		Estado(ComportamientoJugador *c, ubicacion uj, ubicacion us)
+			: comportamiento{c},
+			  jugador{uj},
+			  sonambulo{us}
+		{
 		}
 
 		bool operator==(const Estado &other) const
 		{
-			return (jugador == other.jugador && sonambulo.f == other.sonambulo.f && sonambulo.c == other.sonambulo.c);
+			switch (comportamiento->nivel)
+			{
+			case 0:
+				return jugador == other.jugador;
+			case 1:
+				return jugador == other.jugador && sonambulo.f == other.sonambulo.f && sonambulo.c == other.sonambulo.c;
+			case 2:
+				return jugador == other.jugador && sonambulo.f == other.sonambulo.f && sonambulo.c == other.sonambulo.c && objetoJugador == other.objetoJugador;
+			}
 		}
+
+	private:
+		ComportamientoJugador *comportamiento;
 	};
 
 	struct EstadoHasherJugador
 	{
-		size_t operator()(const Estado &estado) const
+		size_t operator()(const Estado &e) const
 		{
-			return hash<int>()(estado.jugador.f) ^ hash<int>()(estado.jugador.c) ^ hash<int>()(estado.jugador.brujula);
+			return (hash<int>()(e.jugador.f) ^ (hash<int>()(e.jugador.c) << 1)) ^ (hash<int>()(e.jugador.brujula) << 2) ^ (hash<int>()(e.objetoJugador.zapatillas) << 3) ^ (hash<int>()(e.objetoJugador.bikini) << 4);
+		}
+
+		size_t operator()(const std::string &clave) const
+		{
+			std::hash<std::string> hasher;
+			return hasher(clave);
 		}
 	};
 
 	struct EstadoHasherSonambulo
 	{
-		size_t operator()(const Estado &estado) const
+		size_t operator()(const Estado &e) const
 		{
-			return hash<int>()(estado.sonambulo.f) ^ hash<int>()(estado.sonambulo.c) ^ hash<int>()(estado.sonambulo.brujula);
+			return (hash<int>()(e.sonambulo.f) ^ (hash<int>()(e.sonambulo.c) << 1)) ^ (hash<int>()(e.sonambulo.brujula) << 2) ^ (hash<int>()(e.objetoSonambulo.zapatillas) << 3) ^ (hash<int>()(e.objetoSonambulo.bikini) << 4);
 		}
+
+		size_t operator()(const std::string &clave) const
+		{
+			std::hash<std::string> hasher;
+			return hasher(clave);
+		};
 	};
 
 	//////////////////////////////////////////////////////////////////
@@ -116,21 +164,24 @@ public:
 	//////////////////////////////////////////////////////////////////
 	struct Nodo
 	{
-		Action accion;
+		Action accion; // DEBUG: Acción que se ha realizado para llegar al nodo
 		Estado estado; // Estado del nodo
 		Celda celda;   // Información de la celda
 
 		list<Action> secuencia; // Acciones que se han realizado para llegar al nodo
+
+		bool valido; // Indica si el nodo se encuentra en un estado válido
 
 		int costoAcumulado; // Costo acumulado
 		int costoEstimado;	// Costo estimado hasta la meta (para A*)
 
 		Nodo()
 			: comportamiento{nullptr},
-			  //   padre{nullptr},
+			  accion{Action::actIDLE},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
 			  estado{},
-			  //   acciones{std::make_shared<std::vector<Action>>()},
+			  valido{true},
+			  secuencia{},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -138,10 +189,11 @@ public:
 
 		Nodo(ComportamientoJugador *c)
 			: comportamiento{c},
-			  //   padre{nullptr},
+			  accion{Action::actIDLE},
 			  celda{Terreno::Desconocido, Entidad::SinEntidad},
-			  estado{},
-			  //   acciones{std::make_shared<std::vector<Action>>()},
+			  estado{c},
+			  valido{true},
+			  secuencia{},
 			  costoAcumulado{0},
 			  costoEstimado{0}
 		{
@@ -151,6 +203,7 @@ public:
 			: comportamiento{c},
 			  accion{a},
 			  estado{e},
+			  valido{true},
 			  celda{cd},
 			  secuencia{seq},
 			  costoAcumulado{costoAcum},
@@ -158,15 +211,13 @@ public:
 		{
 		}
 
-		// bool operator<(const Nodo &other) const
+		// bool operator>(const Nodo &other) const
 		// {
-		// 	int costoThis = costoAcumulado + heuristica;
-		// 	int costoOther = other.costoAcumulado + other.heuristica;
+		// 	int costoThis = costoAcumulado + costoEstimado;
+		// 	int costoOther = other.costoAcumulado + other.costoEstimado;
 
-		// 	return costoThis > costoOther;
+		// 	return costoThis < costoOther;
 		// }
-
-		//----------------------------------------------------------
 
 		bool operator<(const Nodo &other) const
 		{
@@ -218,14 +269,7 @@ public:
 					return false;
 				break;
 			case 2:
-				if (costoAcumulado < other.costoAcumulado)
-					return true;
-				else if (costoAcumulado == other.costoAcumulado)
-					return estado.jugador.c < other.estado.jugador.c;
-				else if (costoAcumulado == other.costoAcumulado && estado.jugador.c == other.estado.jugador.c)
-					return estado.jugador.brujula < other.estado.jugador.brujula;
-				else
-					return false;
+				return this->costoAcumulado > other.costoAcumulado;
 				break;
 				// case 3:
 				// 	if (costoSonambulo < otherCostoSonambulo)
@@ -278,12 +322,22 @@ public:
 
 	////////////////////////////////////////////////////////////////
 
-	ComportamientoJugador(unsigned int size) : Comportamiento(size), grafo(size, vector<Nodo>(size)), mapaAux(2 * size, vector<Celda>(2 * size))
+	ComportamientoJugador(unsigned int size)
+		: Comportamiento(size),
+		  grafo(size, vector<Nodo>(size)),
+		  mapaAux(2 * size, vector<Celda>(2 * size)),
+		  mapaCeldas(size, vector<Celda>(size)),
+		  estadoActual(this)
 	{
 		inicializaVariablesEstado();
 	}
 
-	ComportamientoJugador(std::vector<std::vector<unsigned char>> mapaR) : Comportamiento(mapaR), grafo(mapaR.size(), vector<Nodo>(mapaR.size())), mapaAux(2 * mapaR.size(), vector<Celda>(2 * mapaR.size()))
+	ComportamientoJugador(std::vector<std::vector<unsigned char>> mapaR)
+		: Comportamiento(mapaR),
+		  grafo(mapaR.size(), vector<Nodo>(mapaR.size())),
+		  mapaAux(2 * mapaR.size(), vector<Celda>(2 * mapaR.size())),
+		  mapaCeldas(mapaR.size(), vector<Celda>(mapaR.size())),
+		  estadoActual(this)
 	{
 		inicializaVariablesEstado();
 	}
@@ -326,12 +380,8 @@ private:
 	Mapa mapaAux; // solo para nivel 4
 	Grafo grafo;
 
-	vector<ubicacion> sonambulos;
-	vector<ubicacion> aldeanos;
-	vector<ubicacion> lobos;
-
 	vector<Celda> vision;
-	vector<vector<Celda>> areaLocal;
+	// vector<vector<Celda>> areaLocal;
 
 	//////////////////////////////////////////////////////////////////
 	// Funciones privadas											//
@@ -347,11 +397,12 @@ private:
 	void actualizaMapaAux();
 	void actualizaVisionJugador(const Estado &estado);
 	void actualizaMapaResultVisionJugador(const Sensores &sensores);
+	void actualizarMapaCeldas();
 
 	// FUNCIONES AUXILIARES
 	list<Action> busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino);
 	list<Action> busquedaAnchuraSonambulo(const Estado &origen, const ubicacion &destino);
-	// list<Action> busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino);
+	list<Action> busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino);
 	// list<Action> encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino);
 	// list<Action> maximizarPuntuacion(const Estado &origen, const ubicacion &destino);
 
@@ -362,8 +413,8 @@ private:
 	void anularMapaConPlan();
 	void visualizaPlan(const list<Action> &plan);
 
-	Terreno charATerreno(unsigned char c);
-	Entidad charAEntidad(unsigned char c);
+	Terreno charATerreno(unsigned char c) const;
+	Entidad charAEntidad(unsigned char c) const;
 
 	Estado aplicar(const Action &a, const Estado &est);
 
@@ -372,17 +423,21 @@ private:
 	bool esDestinoJugador(const Estado &nodo, const ubicacion &destino);
 	bool esDestinoSonambulo(const Estado &nodo, const ubicacion &destino);
 
-	const vector<vector<Celda>> &getMapaCeldas();
+	const vector<vector<Celda>> &getMapaCeldas() const;
+	vector<vector<Celda>> &getMapaCeldas();
+
 	vector<vector<Celda>> getAreaLocalJugador(const vector<vector<Celda>> &mapa, const Estado &estado);
 	vector<vector<Celda>> getAreaLocalSonambulo(const vector<vector<Celda>> &mapa, const Estado &estado);
 
 	void procesarAccion(const Nodo *n, const Action &a, list<Nodo> &frontera, set<Nodo> &explorados);
 
-	Action mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente);
+	// Action mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente);
 
-	Nodo aplicarAccionYActualizarCosto(const Nodo &nodo, const Action &accion);
+	Nodo aplicarAccionCosto(const Nodo &nodo, const Action &accion);
 
 	string generarClave(const Estado &estado);
+
+	int calcularCostoBateria(Action accion, unsigned char tipoCasilla, const Objeto &objetoJugador);
 	//////////////////////////////////////////////////////////////////
 	void debug(bool imprimir) const;
 	string toString(Orientacion orientacion) const;

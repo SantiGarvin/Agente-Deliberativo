@@ -13,6 +13,7 @@ using Mapa = ComportamientoJugador::Mapa;
 using Terreno = ComportamientoJugador::Terreno;
 using Entidad = ComportamientoJugador::Entidad;
 using Estado = ComportamientoJugador::Estado;
+using Objeto = ComportamientoJugador::Objeto;
 
 // Este es el método principal que se piden en la practica.
 // Tiene como entrada la información de los sensores y devuelve la acción a realizar.
@@ -28,7 +29,7 @@ Action ComportamientoJugador::think(Sensores sensores)
 	if (sensores.nivel != 4)
 	{
 		// Actualizar información de los sensores
-		actualizaMapaAux();
+		actualizarMapaCeldas();
 		actualizaGrafo(mapaAux);
 
 		debug(false);
@@ -47,15 +48,15 @@ Action ComportamientoJugador::think(Sensores sensores)
 			case 1:
 				plan = busquedaAnchuraSonambulo(estadoActual, destino);
 				break;
-			// case 2:
-			// 	plan = busquedaDijkstraJugador(estadoActual, destino);
-				// 	break;
-				// case 3:
-				// 	plan = encuentraCaminoAStarSonambulo();
-				// 	break;
-				// case 4:
-				// 	plan = maximizarPuntuacion();
-				// 	break;
+			case 2:
+				plan = busquedaDijkstraJugador(estadoActual, destino);
+				break;
+			// case 3:
+			// 	plan = encuentraCaminoAStarSonambulo();
+			// 	break;
+			// case 4:
+			// 	plan = maximizarPuntuacion();
+			// 	break;
 			}
 			if (plan.size() > 0)
 			{
@@ -131,30 +132,6 @@ void ComportamientoJugador::actualizaEstado(const Sensores &sensores)
 		estadoActual.sonambulo.f = sensores.SONposF;
 		estadoActual.sonambulo.c = sensores.SONposC;
 		estadoActual.sonambulo.brujula = sensores.SONsentido;
-
-		int f = estadoActual.jugador.f;
-		int c = estadoActual.jugador.c;
-
-		// Actualizar lista de sonámbulos
-		sonambulos.clear();
-		for (int i = 0; i < mapaEntidades.size(); ++i)
-			for (int j = 0; j < mapaEntidades[0].size(); ++j)
-				if (mapaEntidades[i][j] == Entidad::Sonambulo)
-					sonambulos.push_back({i, j});
-
-		// Actualizar lista de aldeanos
-		aldeanos.clear();
-		for (int i = 0; i < mapaEntidades.size(); ++i)
-			for (int j = 0; j < mapaEntidades[0].size(); ++j)
-				if (mapaEntidades[i][j] == Entidad::Aldeano)
-					aldeanos.push_back({i, j});
-
-		// Actualizar lista de lobos
-		lobos.clear();
-		for (int i = 0; i < mapaEntidades.size(); i++)
-			for (int j = 0; j < mapaEntidades[0].size(); j++)
-				if (mapaEntidades[i][j] == Entidad::Lobo)
-					lobos.push_back({i, j});
 	}
 
 	int f = estadoActual.jugador.f;
@@ -294,7 +271,7 @@ void ComportamientoJugador::actualizaGrafo(const Mapa &mapaAux)
 	}
 }
 
-Terreno ComportamientoJugador::charATerreno(unsigned char c)
+Terreno ComportamientoJugador::charATerreno(unsigned char c) const
 {
 	switch (c)
 	{
@@ -321,7 +298,7 @@ Terreno ComportamientoJugador::charATerreno(unsigned char c)
 	}
 }
 
-Entidad ComportamientoJugador::charAEntidad(unsigned char c)
+Entidad ComportamientoJugador::charAEntidad(unsigned char c) const
 {
 	switch (c)
 	{
@@ -484,7 +461,7 @@ Estado ComportamientoJugador::aplicar(const Action &a, const Estado &st)
 
 bool ComportamientoJugador::casillaTransitable(const ubicacion &pos)
 {
-	return mapaAux[pos.f][pos.c].esTransitable();
+	return mapaCeldas[pos.f][pos.c].esTransitable();
 }
 
 list<Action> ComportamientoJugador::busquedaAnchuraJugador(const Estado &origen, const ubicacion &destino)
@@ -644,25 +621,15 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 
 // list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino)
 // {
-	
-// }
-// {
 // 	priority_queue<Nodo, vector<Nodo>, greater<Nodo>> cola;
 // 	unordered_map<string, Nodo, EstadoHasherJugador> visitados;
 
-// 	// Crear nodos iniciales con todas las orientaciones posibles para el jugador principal
-// 	for (int orientacion = 0; orientacion < 8; ++orientacion)
-// 	{
-// 		if (orientacion % 2 != 0) // Solo orientaciones a 90 grados
-// 		{
-// 			continue;
-// 		}
+// 	// Crear nodo inicial con la orientación actual del jugador
+// 	Estado estadoInicial = origen;
+// 	Nodo nodoInicial(this, actIDLE, estadoInicial, getMapaCeldas()[estadoInicial.jugador.f][estadoInicial.jugador.c], {}, 0, 0);
+// 	cola.push(nodoInicial);
 
-// 		Estado estadoInicial = origen;
-// 		estadoInicial.jugador.brujula = static_cast<Orientacion>(orientacion);
-// 		Nodo nodoInicial(this, actIDLE, estadoInicial, getMapaCeldas()[estadoInicial.jugador.f][estadoInicial.jugador.c], {}, 0, 0);
-// 		cola.push(nodoInicial);
-// 	}
+// 	int contador = 0;
 
 // 	while (!cola.empty())
 // 	{
@@ -671,6 +638,7 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 
 // 		string claveActual = generarClave(actual.estado);
 
+// 		// Si ya se visitó el estado, continuar con el siguiente nodo
 // 		if (visitados.find(claveActual) != visitados.end())
 // 		{
 // 			continue;
@@ -680,6 +648,9 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 
 // 		if (actual.estado.jugador.f == destino.f && actual.estado.jugador.c == destino.c)
 // 		{
+// 			cout << "ITERACIONES: " << contador << endl;
+// 			cout << "ABIERTOS: " << cola.size() << endl;
+// 			cout << "CERRADOS: " << visitados.size() << endl;
 // 			return actual.secuencia;
 // 		}
 
@@ -687,51 +658,126 @@ void ComportamientoJugador::procesarAccion(const Nodo *n, const Action &a, list<
 
 // 		for (const auto &accion : accionesPosibles)
 // 		{
-// 			Nodo sucesor = aplicarAccionYActualizarCosto(actual, accion);
+// 			Nodo sucesor = aplicarAccionCosto(actual, accion);
 // 			string claveSucesor = generarClave(sucesor.estado);
 
-// 			if (visitados.find(claveSucesor) == visitados.end())
+// 			if (sucesor.valido && visitados.find(claveSucesor) == visitados.end())
 // 			{
 // 				cola.push(sucesor);
 // 			}
 // 		}
+// 		contador++;
 // 	}
 
 // 	// Si no se encuentra una solución, devolver una lista vacía
 // 	return list<Action>();
 // }
 
-// string ComportamientoJugador::generarClave(const Estado &estado) {
-//     stringstream clave;
-//     clave << estado.jugador.f << "," << estado.jugador.c << "," << estado.jugador.brujula << "_"
-//           << estado.sonambulo.f << "," << estado.sonambulo.c << "," << estado.sonambulo.brujula;
-//     return clave.str();
-// }
+list<Action> ComportamientoJugador::busquedaDijkstraJugador(const Estado &origen, const ubicacion &destino)
+{
+	priority_queue<Nodo, vector<Nodo>, less<Nodo>> cola;
+	unordered_map<string, Nodo, EstadoHasherJugador> visitados;
 
+	// Crear nodo inicial con la orientación actual del jugador
+	Estado estadoInicial = origen;
+	Nodo nodoInicial(this, actIDLE, estadoInicial, getMapaCeldas()[estadoInicial.jugador.f][estadoInicial.jugador.c], {}, 0, 0);
+	cola.push(nodoInicial);
 
-// Nodo ComportamientoJugador::aplicarAccionYActualizarCosto(const Nodo &nodo, const Action &accion)
-// {
-// 	// Aplicamos la acción al estado actual del nodo.
-// 	Estado estadoNuevo = aplicar(accion, nodo.estado);
+	int contador = 0;
 
-// 	// Verificamos si la casilla resultante es transitable.
-// 	ubicacion nuevaUbicacionJugador = estadoNuevo.jugador;
-// 	if (!casillaTransitable(nuevaUbicacionJugador))
-// 	{
-// 		return nodo; // Retornamos el nodo original si la casilla no es transitable.
-// 	}
+	while (!cola.empty())
+	{
+		Nodo actual = cola.top();
+		cola.pop();
 
-// 	// Calculamos el costo de batería asociado con la acción.
-// 	Celda celdaActual = mapaCeldas[nuevaUbicacionJugador.f][nuevaUbicacionJugador.c];
-// 	int costoBateria = calcularCostoBateria(accion, celdaActual.terreno);
+		string claveActual = generarClave(actual.estado);
 
-// 	// Creamos un nuevo nodo con el estado actualizado y el costo de batería actualizado.
-// 	Nodo nodoNuevo = nodo;
-// 	nodoNuevo.estado = estadoNuevo;
-// 	nodoNuevo.costoAcumulado += costoBateria;
+		// Si ya se visitó el estado y el costo acumulado es menor o igual, continuar con el siguiente nodo
+		auto it = visitados.find(claveActual);
+		if (it != visitados.end() && it->second.costoAcumulado <= actual.costoAcumulado)
+		{
+			continue;
+		}
 
-// 	return nodoNuevo;
-// }
+		visitados[claveActual] = actual;
+
+		if (actual.estado.jugador.f == destino.f && actual.estado.jugador.c == destino.c)
+		{
+			cout << "ITERACIONES: " << contador << endl;
+			cout << "ABIERTOS: " << cola.size() << endl;
+			cout << "CERRADOS: " << visitados.size() << endl;
+			return actual.secuencia;
+		}
+
+		vector<Action> accionesPosibles = {actFORWARD, actTURN_L, actTURN_R};
+
+		for (const auto &accion : accionesPosibles)
+		{
+			Nodo sucesor = aplicarAccionCosto(actual, accion);
+			string claveSucesor = generarClave(sucesor.estado);
+
+			if (sucesor.valido)
+			{
+				cola.push(sucesor);
+			}
+		}
+		contador++;
+	}
+
+	// Si no se encuentra una solución, devolver una lista vacía
+	return list<Action>();
+}
+
+string ComportamientoJugador::generarClave(const Estado &estado)
+{
+	stringstream clave;
+	clave << estado.jugador.f << "," << estado.jugador.c << "," << estado.jugador.brujula << ","
+		  << (estado.objetoJugador.zapatillas ? "1" : "0") << "," << (estado.objetoJugador.bikini ? "1" : "0") << "_"
+		  << estado.sonambulo.f << "," << estado.sonambulo.c << "," << estado.sonambulo.brujula << ","
+		  << (estado.objetoSonambulo.zapatillas ? "1" : "0") << "," << (estado.objetoSonambulo.bikini ? "1" : "0");
+	return clave.str();
+}
+
+Nodo ComportamientoJugador::aplicarAccionCosto(const Nodo &nodo, const Action &accion)
+{
+	// Aplicamos la acción al estado actual del nodo.
+	Estado estadoNuevo = aplicar(accion, nodo.estado);
+
+	// Verificamos si la casilla resultante es transitable.
+	ubicacion nuevaUbicacionJugador = estadoNuevo.jugador;
+	if (!casillaTransitable(nuevaUbicacionJugador))
+	{
+		Nodo nodoInvalido = nodo;
+		nodoInvalido.valido = false;
+		return nodoInvalido;
+	}
+
+	Terreno objeto = charATerreno(getMapaCeldas()[nuevaUbicacionJugador.f][nuevaUbicacionJugador.c].terreno);
+	if (objeto == Terreno::Zapatillas)
+	{
+		estadoNuevo.objetoJugador.zapatillas = true;
+		estadoNuevo.objetoJugador.bikini = false;
+	}
+	else if (objeto == Terreno::Bikini)
+	{
+		estadoNuevo.objetoJugador.bikini = true;
+		estadoNuevo.objetoJugador.zapatillas = false;
+	}
+
+	// Calculamos el costo de batería asociado con la acción.
+	Celda celdaActual = mapaCeldas[nuevaUbicacionJugador.f][nuevaUbicacionJugador.c];
+	int costoBateria = calcularCostoBateria(accion, celdaActual.terreno, estadoNuevo.objetoJugador);
+
+	// Creamos un nuevo nodo con el estado actualizado y el costo de batería actualizado.
+	Nodo nodoNuevo = nodo;
+	nodoNuevo.estado = estadoNuevo;
+	nodoNuevo.costoAcumulado += costoBateria;
+
+	// Añadimos la acción a la secuencia de acciones del nuevo nodo.
+	nodoNuevo.secuencia.push_back(accion);
+
+	return nodoNuevo;
+}
 
 // list<Action> ComportamientoJugador::encuentraCaminoAStarSonambulo(const Estado &origen, const ubicacion &destino)
 // {
@@ -781,56 +827,64 @@ bool ComportamientoJugador::esDestinoSonambulo(const Estado &origen, const ubica
 	return (origen.sonambulo.f == destino.f && origen.sonambulo.c == destino.c);
 }
 
-Action ComportamientoJugador::mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente)
-{
-	int minCosto = numeric_limits<int>::max();
-	Action mejorAccion = actIDLE;
+// Action ComportamientoJugador::mejorMovimiento(const Estado &estado, const vector<vector<Celda>> &mapa, Entidad agente)
+// {
+// 	int minCosto = numeric_limits<int>::max();
+// 	Action mejorAccion = actIDLE;
 
-	// Definir las direcciones posibles según el agente
-	vector<Orientacion> direcciones;
-	if (agente == Entidad::Jugador)
-	{
-		direcciones = {norte, este, sur, oeste};
-	}
-	else if (agente == Entidad::Sonambulo)
-	{
-		direcciones = {norte, noreste, este, sureste, sur, suroeste, oeste, noroeste};
-	}
+// 	// Definir las direcciones posibles según el agente
+// 	vector<Orientacion> direcciones;
+// 	if (agente == Entidad::Jugador)
+// 	{
+// 		direcciones = {norte, este, sur, oeste};
+// 	}
+// 	else if (agente == Entidad::Sonambulo)
+// 	{
+// 		direcciones = {norte, noreste, este, sureste, sur, suroeste, oeste, noroeste};
+// 	}
 
-	// Recorrer las direcciones posibles y encontrar la de menor coste
-	for (const auto &direccion : direcciones)
-	{
-		ubicacion posActual = {estado.jugador.f, estado.jugador.c, direccion};
-		ubicacion siguientePos = siguienteCasilla(posActual);
+// 	// Recorrer las direcciones posibles y encontrar la de menor coste
+// 	for (const auto &direccion : direcciones)
+// 	{
+// 		ubicacion posActual = {estado.jugador.f, estado.jugador.c, direccion};
+// 		ubicacion siguientePos = siguienteCasilla(posActual);
 
-		// Verificar que la siguiente casilla es válida (no fuera del mapa)
-		if (siguientePos.f == posActual.f && siguientePos.c == posActual.c)
-		{
-			continue;
-		}
+// 		// Verificar que la siguiente casilla es válida (no fuera del mapa)
+// 		if (siguientePos.f == posActual.f && siguientePos.c == posActual.c)
+// 		{
+// 			continue;
+// 		}
 
-		int costo = calcularCostoBateria(actFORWARD, mapa[siguientePos.f][siguientePos.c].terreno);
-		if (costo < minCosto)
-		{
-			minCosto = costo;
-			mejorAccion = actFORWARD;
-		}
-	}
+// 		int costo = calcularCostoBateria(actFORWARD, mapa[siguientePos.f][siguientePos.c].terreno);
+// 		if (costo < minCosto)
+// 		{
+// 			minCosto = costo;
+// 			mejorAccion = actFORWARD;
+// 		}
+// 	}
 
-	return mejorAccion;
-}
+// 	return mejorAccion;
+// }
 
-const vector<vector<ComportamientoJugador::Celda>> &ComportamientoJugador::getMapaCeldas()
+void ComportamientoJugador::actualizarMapaCeldas()
 {
 	for (int i = 0; i < mapaResultado.size(); ++i)
 	{
 		for (int j = 0; j < mapaResultado[0].size(); ++j)
 		{
-			mapaCeldas[i][j].terreno = mapaResultado[i][j];
-			mapaCeldas[i][j].superficie = mapaEntidades[i][j];
+			mapaCeldas[i][j].terreno = charATerreno(mapaResultado[i][j]);
+			mapaCeldas[i][j].superficie = charAEntidad(mapaEntidades[i][j]);
 		}
 	}
+}
 
+const vector<vector<Celda>> &ComportamientoJugador::getMapaCeldas() const
+{
+	return mapaCeldas;
+}
+
+vector<vector<Celda>> &ComportamientoJugador::getMapaCeldas()
+{
 	return mapaCeldas;
 }
 
@@ -1299,7 +1353,7 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 		case Terreno::Bosque:
 			costo = tieneZapatillas ? 15 : 50;
 			break;
-		case Terreno::SueloPiedra:
+		case Terreno::SueloArenoso:
 			costo = 2;
 			break;
 		default:
@@ -1317,7 +1371,7 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 		case Terreno::Bosque:
 			costo = tieneZapatillas ? 1 : 5;
 			break;
-		case Terreno::SueloPiedra:
+		case Terreno::SueloArenoso:
 			costo = 2;
 			break;
 		default:
@@ -1335,7 +1389,78 @@ int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tip
 		case Terreno::Bosque:
 			costo = tieneZapatillas ? 1 : 3;
 			break;
-		case Terreno::SueloPiedra:
+		case Terreno::SueloArenoso:
+			costo = 1;
+			break;
+		default:
+			costo = 1;
+			break;
+		}
+		break;
+	case actWHEREIS:
+		costo = 200;
+		break;
+	case actIDLE:
+		costo = 0;
+		break;
+	}
+
+	return costo;
+}
+
+int ComportamientoJugador::calcularCostoBateria(Action accion, unsigned char tipoCasilla, const Objeto &objetoJugador)
+{
+	int costo = 0;
+
+	switch (accion)
+	{
+	case actFORWARD:
+	case actSON_FORWARD:
+		switch (tipoCasilla)
+		{
+		case Terreno::Agua:
+			costo = objetoJugador.bikini ? 10 : 100;
+			break;
+		case Terreno::Bosque:
+			costo = objetoJugador.zapatillas ? 15 : 50;
+			break;
+		case Terreno::SueloArenoso:
+			costo = 2;
+			break;
+		default:
+			costo = 1;
+			break;
+		}
+		break;
+	case actTURN_L:
+	case actTURN_R:
+		switch (tipoCasilla)
+		{
+		case Terreno::Agua:
+			costo = objetoJugador.bikini ? 5 : 25;
+			break;
+		case Terreno::Bosque:
+			costo = objetoJugador.zapatillas ? 1 : 5;
+			break;
+		case Terreno::SueloArenoso:
+			costo = 2;
+			break;
+		default:
+			costo = 1;
+			break;
+		}
+		break;
+	case actSON_TURN_SL:
+	case actSON_TURN_SR:
+		switch (tipoCasilla)
+		{
+		case Terreno::Agua:
+			costo = objetoJugador.bikini ? 2 : 7;
+			break;
+		case Terreno::Bosque:
+			costo = objetoJugador.zapatillas ? 1 : 3;
+			break;
+		case Terreno::SueloArenoso:
 			costo = 1;
 			break;
 		default:
